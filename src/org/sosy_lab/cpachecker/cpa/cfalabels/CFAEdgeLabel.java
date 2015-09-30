@@ -30,8 +30,18 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 
-public enum CFAEdgeLabel implements Serializable{
-  INT_DECL,
-  INT_CONST_INIT,
-  INT_RAND_INIT,
+public enum CFAEdgeLabel implements Serializable {
+
+  DECL,
+  VAR,
+  FUNC,
+  UNSIGNED,
+  INT,
+  FLOAT,
+  PTR,
+  VOID,
+  ARRAY,
+  ASSUME,
+  CAST
+
 }

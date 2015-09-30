@@ -24,7 +24,9 @@
 package org.sosy_lab.cpachecker.cpa.cfalabels;
 
 import java.io.Serializable;
+import java.util.List;
 
+import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 
 import com.google.common.collect.ImmutableTable;
@@ -35,7 +37,7 @@ import com.google.common.collect.Table;
 public class CFALabelsState
     implements Serializable, AbstractState {
 
-  private Table<Integer, Integer, CFAEdgeLabel> cfaEdgeLabelMap;
+  private Table<Integer, Integer, List<CFAEdgeLabel>> cfaEdgeLabelMap;
 
   public final static CFALabelsState TOP = new CFALabelsState();
 
@@ -43,7 +45,7 @@ public class CFALabelsState
     cfaEdgeLabelMap = ImmutableTable.of();
   }
 
-  private CFALabelsState(Table<Integer, Integer, CFAEdgeLabel> pCfaEdgeLabelMap) {
+  private CFALabelsState(Table<Integer, Integer, List<CFAEdgeLabel>> pCfaEdgeLabelMap) {
     cfaEdgeLabelMap = pCfaEdgeLabelMap;
   }
 
@@ -61,9 +63,11 @@ public class CFALabelsState
         this.cfaEdgeLabelMap);
   }
 
-  public CFALabelsState addEdgeLabel(Integer pSourceCFANodeId, Integer pTargetCFANodeId, CFAEdgeLabel pLabel) {
-    Builder<Integer, Integer, CFAEdgeLabel> b = ImmutableTable.builder();
-    b.put(pSourceCFANodeId, pTargetCFANodeId, pLabel);
+  public CFALabelsState addEdgeLabel(CFAEdge pEdge, List<CFAEdgeLabel> pLabels) {
+    Builder<Integer, Integer, List<CFAEdgeLabel>> b = ImmutableTable.builder();
+    b.put(pEdge.getPredecessor().getNodeNumber(),
+          pEdge.getSuccessor().getNodeNumber(),
+          pLabels);
     b.putAll(cfaEdgeLabelMap);
     return new CFALabelsState(b.build());
   }

@@ -27,25 +27,27 @@ import java.util.Collection;
 import java.util.List;
 
 import org.sosy_lab.common.log.LogManager;
-import org.sosy_lab.cpachecker.cfa.ast.ADeclaration;
-import org.sosy_lab.cpachecker.cfa.ast.AExpression;
-import org.sosy_lab.cpachecker.cfa.ast.AFunctionCall;
-import org.sosy_lab.cpachecker.cfa.ast.AParameterDeclaration;
-import org.sosy_lab.cpachecker.cfa.ast.AStatement;
-import org.sosy_lab.cpachecker.cfa.model.ADeclarationEdge;
-import org.sosy_lab.cpachecker.cfa.model.AReturnStatementEdge;
-import org.sosy_lab.cpachecker.cfa.model.AStatementEdge;
-import org.sosy_lab.cpachecker.cfa.model.AssumeEdge;
+import org.sosy_lab.cpachecker.cfa.ast.c.CDeclaration;
+import org.sosy_lab.cpachecker.cfa.ast.c.CExpression;
+import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCall;
+import org.sosy_lab.cpachecker.cfa.ast.c.CParameterDeclaration;
+import org.sosy_lab.cpachecker.cfa.ast.c.CStatement;
 import org.sosy_lab.cpachecker.cfa.model.BlankEdge;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
-import org.sosy_lab.cpachecker.cfa.model.FunctionCallEdge;
-import org.sosy_lab.cpachecker.cfa.model.FunctionReturnEdge;
-import org.sosy_lab.cpachecker.cfa.model.FunctionSummaryEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CAssumeEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CDeclarationEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CFunctionCallEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CFunctionReturnEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CFunctionSummaryEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CReturnStatementEdge;
+import org.sosy_lab.cpachecker.cfa.model.c.CStatementEdge;
 import org.sosy_lab.cpachecker.core.defaults.ForwardingTransferRelation;
 import org.sosy_lab.cpachecker.core.defaults.SingletonPrecision;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Precision;
+import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CSimpleDeclLabelVisitor;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
+import org.sosy_lab.cpachecker.exceptions.UnsupportedCodeException;
 
 
 public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALabelsState, CFALabelsState, SingletonPrecision> {
@@ -62,48 +64,47 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
     return null;
   }
 
-
   @Override
-  protected CFALabelsState handleAssumption(AssumeEdge cfaEdge,
-      AExpression expression, boolean truthAssumption)
+  protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
+      CExpression expression, boolean truthAssumption)
       throws CPATransferException {
-
-    return super.handleAssumption(cfaEdge, expression, truthAssumption);
+    throw new UnsupportedCodeException("Assumption", cfaEdge);
   }
 
   @Override
-  protected CFALabelsState handleFunctionCallEdge(FunctionCallEdge cfaEdge,
-      List<? extends AExpression> arguments,
-      List<? extends AParameterDeclaration> parameters,
+  protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
+      List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
-    return super.handleFunctionCallEdge(cfaEdge, arguments, parameters,
-        calledFunctionName);
+    throw new UnsupportedCodeException("FunctionCallEdge", cfaEdge);
   }
 
   @Override
-  protected CFALabelsState handleFunctionReturnEdge(FunctionReturnEdge cfaEdge,
-      FunctionSummaryEdge fnkCall, AFunctionCall summaryExpr,
+  protected CFALabelsState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
+      CFunctionSummaryEdge fnkCall, CFunctionCall summaryExpr,
       String callerFunctionName) throws CPATransferException {
-    return super.handleFunctionReturnEdge(cfaEdge, fnkCall, summaryExpr,
-        callerFunctionName);
+    throw new UnsupportedCodeException("FunctionReturnEdge", cfaEdge);
   }
 
   @Override
-  protected CFALabelsState handleDeclarationEdge(ADeclarationEdge cfaEdge,
-      ADeclaration decl) throws CPATransferException {
-    return super.handleDeclarationEdge(cfaEdge, decl);
+  protected CFALabelsState handleDeclarationEdge(CDeclarationEdge cfaEdge,
+      CDeclaration decl) throws CPATransferException {
+    CSimpleDeclLabelVisitor declVisitor = new CSimpleDeclLabelVisitor(cfaEdge);
+    decl.accept(declVisitor);
+    List<CFAEdgeLabel> labels = declVisitor.getLabels();
+    labels.add(CFAEdgeLabel.DECL);
+    return state.addEdgeLabel(cfaEdge, labels);
   }
 
   @Override
-  protected CFALabelsState handleStatementEdge(AStatementEdge cfaEdge,
-      AStatement statement) throws CPATransferException {
-    return super.handleStatementEdge(cfaEdge, statement);
+  protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
+      CStatement statement) throws CPATransferException {
+    throw new UnsupportedCodeException("StatementEdge", cfaEdge);
   }
 
   @Override
   protected CFALabelsState handleReturnStatementEdge(
-      AReturnStatementEdge cfaEdge) throws CPATransferException {
-    return super.handleReturnStatementEdge(cfaEdge);
+      CReturnStatementEdge cfaEdge) throws CPATransferException {
+    throw new UnsupportedCodeException("ReturnStatementEdge", cfaEdge);
   }
 
   @Override
@@ -113,7 +114,7 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
 
   @Override
   protected CFALabelsState handleFunctionSummaryEdge(
-      FunctionSummaryEdge cfaEdge) throws CPATransferException {
-    return super.handleFunctionSummaryEdge(cfaEdge);
+      CFunctionSummaryEdge cfaEdge) throws CPATransferException {
+    throw new UnsupportedCodeException("SummaryEdge", cfaEdge);
   }
 }
