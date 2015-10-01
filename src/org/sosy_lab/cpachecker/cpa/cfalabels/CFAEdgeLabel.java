@@ -32,16 +32,32 @@ import com.google.common.collect.ImmutableSet;
 
 public enum CFAEdgeLabel implements Serializable {
 
+  // Statements
   DECL,
   VAR,
   FUNC,
+  ASSUME,
+  CAST,
+
+  // Types
   UNSIGNED,
   INT,
   FLOAT,
   PTR,
   VOID,
   ARRAY,
-  ASSUME,
-  CAST
+
+  // Expression
+  COMPARISON,
+  ARITHMETIC,
+  LOGICAL,
+  BIT_OPERATION,
+  LITERAL,
+  ADDRESS,
+  SIZEOF,
+  ID,
+  COMPLEX,
+  ARRAY_SUBSCRIPT,
+  TYPE_ID
 
 }
