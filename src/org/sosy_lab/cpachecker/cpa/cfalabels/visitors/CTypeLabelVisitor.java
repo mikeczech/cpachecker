@@ -25,6 +25,7 @@ package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.cfa.types.c.CArrayType;
@@ -42,99 +43,93 @@ import org.sosy_lab.cpachecker.cpa.cfalabels.CFAEdgeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
+import com.google.common.collect.Sets;
+
 /**
  * Created by zenscr on 30/09/15.
  */
-public class CTypeLabelVisitor implements CTypeVisitor<Void, CPATransferException> {
+public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATransferException> {
 
   private final CFAEdge cfaEdge;
-
-  public List<CFAEdgeLabel> getTypeLabels() {
-    return typeLabels;
-  }
-
-  private final List<CFAEdgeLabel> typeLabels = new ArrayList<>();
 
   public CTypeLabelVisitor(CFAEdge cfaEdge) {
     this.cfaEdge = cfaEdge;
   }
 
   @Override
-  public Void visit(CArrayType pArrayType) throws CPATransferException {
-    this.typeLabels.add(CFAEdgeLabel.ARRAY);
-    pArrayType.getType().accept(this);
-    return null;
+  public Set<CFAEdgeLabel> visit(CArrayType pArrayType) throws CPATransferException {
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.ARRAY);
+    labels.addAll(pArrayType.getType().accept(this));
+    return Sets.immutableEnumSet(labels);
   }
 
   @Override
-  public Void visit(CCompositeType pCompositeType)
+  public Set<CFAEdgeLabel> visit(CCompositeType pCompositeType)
       throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 
   @Override
-  public Void visit(CElaboratedType pElaboratedType)
+  public Set<CFAEdgeLabel> visit(CElaboratedType pElaboratedType)
       throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 
   @Override
-  public Void visit(CEnumType pEnumType) throws CPATransferException {
+  public Set<CFAEdgeLabel> visit(CEnumType pEnumType) throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 
   @Override
-  public Void visit(CFunctionType pFunctionType)
-      throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
-  }
-
-  @Override
-  public Void visit(CPointerType pPointerType)
-      throws CPATransferException {
-    this.typeLabels.add(CFAEdgeLabel.PTR);
-    pPointerType.getType().accept(this);
-    return null;
-  }
-
-  @Override
-  public Void visit(CProblemType pProblemType)
+  public Set<CFAEdgeLabel> visit(CFunctionType pFunctionType)
       throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 
   @Override
-  public Void visit(CSimpleType pSimpleType)
+  public Set<CFAEdgeLabel> visit(CPointerType pPointerType)
       throws CPATransferException {
+    return Sets.union(pPointerType.getType().accept(this), Sets.immutableEnumSet(CFAEdgeLabel.PTR));
+  }
+
+  @Override
+  public Set<CFAEdgeLabel> visit(CProblemType pProblemType)
+      throws CPATransferException {
+    throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
+  }
+
+  @Override
+  public Set<CFAEdgeLabel> visit(CSimpleType pSimpleType)
+      throws CPATransferException {
+    Set<CFAEdgeLabel> labels = Sets.newHashSet();
     if(pSimpleType.isUnsigned())
-      this.typeLabels.add(CFAEdgeLabel.UNSIGNED);
+      labels.add(CFAEdgeLabel.UNSIGNED);
     switch(pSimpleType.getType()) {
       case BOOL:
       case CHAR:
       case INT:
-        this.typeLabels.add(CFAEdgeLabel.INT);
+        labels.add(CFAEdgeLabel.INT);
         break;
       case FLOAT:
       case DOUBLE:
-        this.typeLabels.add(CFAEdgeLabel.FLOAT);
+        labels.add(CFAEdgeLabel.FLOAT);
         break;
       default:
         throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
     }
-    return null;
+    return Sets.immutableEnumSet(labels);
   }
 
   @Override
-  public Void visit(CTypedefType pTypedefType)
+  public Set<CFAEdgeLabel> visit(CTypedefType pTypedefType)
       throws CPATransferException {
-    // We ignore typedefs and use the real type.
-    pTypedefType.getRealType().accept(this);
-    return null;
+    return pTypedefType.getRealType().accept(this);
   }
 
   @Override
-  public Void visit(CVoidType pVoidType) throws CPATransferException {
-    this.typeLabels.add(CFAEdgeLabel.VOID);
-    return null;
+  public Set<CFAEdgeLabel> visit(CVoidType pVoidType)
+      throws CPATransferException {
+    return Sets.immutableEnumSet(CFAEdgeLabel.VOID);
   }
+
 }

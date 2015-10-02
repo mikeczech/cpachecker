@@ -25,6 +25,7 @@ package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CComplexTypeDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionDeclaration;
@@ -38,17 +39,13 @@ import org.sosy_lab.cpachecker.cpa.cfalabels.CFAEdgeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
+import com.google.common.collect.Sets;
+
 /**
  * Created by zenscr on 30/09/15.
  */
 public class CSimpleDeclLabelVisitor
-    implements CSimpleDeclarationVisitor<Void,CPATransferException> {
-
-  private final List<CFAEdgeLabel> labels = new ArrayList<>();
-
-  public List<CFAEdgeLabel> getLabels() {
-    return labels;
-  }
+    implements CSimpleDeclarationVisitor<Set<CFAEdgeLabel>, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
@@ -57,42 +54,38 @@ public class CSimpleDeclLabelVisitor
   }
 
   @Override
-  public Void visit(CFunctionDeclaration pDecl)
+  public Set<CFAEdgeLabel> visit(CFunctionDeclaration pDecl)
       throws CPATransferException {
-    labels.add(CFAEdgeLabel.FUNC);
-    return null;
+    return Sets.immutableEnumSet(CFAEdgeLabel.FUNC);
   }
 
   @Override
-  public Void visit(CComplexTypeDeclaration pDecl)
-      throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
-  }
-
-  @Override
-  public Void visit(CTypeDeclaration pDecl)
+  public Set<CFAEdgeLabel> visit(CComplexTypeDeclaration pDecl)
       throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 
   @Override
-  public Void visit(CVariableDeclaration pDecl)
+  public Set<CFAEdgeLabel> visit(CTypeDeclaration pDecl)
+      throws CPATransferException {
+    throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
+  }
+
+  @Override
+  public Set<CFAEdgeLabel> visit(CVariableDeclaration pDecl)
       throws CPATransferException {
     CTypeLabelVisitor declTypeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-    pDecl.getType().accept(declTypeVisitor);
-    labels.add(CFAEdgeLabel.VAR);
-    labels.addAll(declTypeVisitor.getTypeLabels());
-    return null;
+    return Sets.union(Sets.immutableEnumSet(CFAEdgeLabel.VAR), pDecl.getType().accept(declTypeVisitor));
   }
 
   @Override
-  public Void visit(CParameterDeclaration pDecl)
+  public Set<CFAEdgeLabel> visit(CParameterDeclaration pDecl)
       throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 
   @Override
-  public Void visit(CEnumerator pDecl) throws CPATransferException {
+  public Set<CFAEdgeLabel> visit(CEnumerator pDecl) throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
   }
 }

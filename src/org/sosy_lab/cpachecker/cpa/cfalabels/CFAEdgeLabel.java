@@ -34,10 +34,13 @@ public enum CFAEdgeLabel implements Serializable {
 
   // Statements
   DECL,
+  STMT,
   VAR,
   FUNC,
   ASSUME,
   CAST,
+  ASSIGN,
+  RETURN,
 
   // Types
   UNSIGNED,

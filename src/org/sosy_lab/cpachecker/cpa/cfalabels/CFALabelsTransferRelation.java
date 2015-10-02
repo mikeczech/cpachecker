@@ -23,8 +23,10 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.sosy_lab.common.log.LogManager;
 import org.sosy_lab.cpachecker.cfa.ast.c.CDeclaration;
@@ -45,9 +47,13 @@ import org.sosy_lab.cpachecker.core.defaults.ForwardingTransferRelation;
 import org.sosy_lab.cpachecker.core.defaults.SingletonPrecision;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Precision;
+import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CExpressionLabelVisitor;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CSimpleDeclLabelVisitor;
+import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CStatementLabelVisitor;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCodeException;
+
+import com.google.common.collect.Sets;
 
 
 public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALabelsState, CFALabelsState, SingletonPrecision> {
@@ -68,7 +74,9 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
       CExpression expression, boolean truthAssumption)
       throws CPATransferException {
-    throw new UnsupportedCodeException("Assumption", cfaEdge);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.ASSUME);
+    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
+    return state.addEdgeLabel(cfaEdge, Sets.union(labels, expression.accept(expLabelVisitor)));
   }
 
   @Override
@@ -89,22 +97,23 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleDeclarationEdge(CDeclarationEdge cfaEdge,
       CDeclaration decl) throws CPATransferException {
     CSimpleDeclLabelVisitor declVisitor = new CSimpleDeclLabelVisitor(cfaEdge);
-    decl.accept(declVisitor);
-    List<CFAEdgeLabel> labels = declVisitor.getLabels();
-    labels.add(CFAEdgeLabel.DECL);
-    return state.addEdgeLabel(cfaEdge, labels);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.DECL);
+    return state.addEdgeLabel(cfaEdge, Sets.union(labels, decl.accept(declVisitor)));
   }
 
   @Override
   protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
       CStatement statement) throws CPATransferException {
-    throw new UnsupportedCodeException("StatementEdge", cfaEdge);
+    CStatementLabelVisitor statementLabelVisitor = new CStatementLabelVisitor(cfaEdge);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.STMT);
+    return state.addEdgeLabel(cfaEdge, Sets.union(labels,
+        statement.accept(statementLabelVisitor)));
   }
 
   @Override
   protected CFALabelsState handleReturnStatementEdge(
       CReturnStatementEdge cfaEdge) throws CPATransferException {
-    throw new UnsupportedCodeException("ReturnStatementEdge", cfaEdge);
+    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.RETURN));
   }
 
   @Override
