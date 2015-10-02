@@ -83,6 +83,14 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
       List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
+    if(calledFunctionName.equals("__VERIFIER_assert") || calledFunctionName.equals("assert")) {
+      Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.VERIFIER_ASSERT_CALL_ID);
+      for(CExpression arg : arguments) {
+        CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
+        labels.addAll(arg.accept(expLabelVisitor));
+      }
+      return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(labels));
+    }
     return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.FUNC_CALL));
   }
 

@@ -23,8 +23,6 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CAddressOfLabelExpression;
@@ -158,7 +156,7 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
   @Override
   public Set<CFAEdgeLabel> visit(CImaginaryLiteralExpression PIastLiteralExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(CFAEdgeLabel.COMPLEX);
+    return Sets.immutableEnumSet(CFAEdgeLabel.COMPLEX_NUMBER);
   }
 
   @Override
@@ -176,7 +174,7 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
   @Override
   public Set<CFAEdgeLabel> visit(CFieldReference pIastFieldReference)
       throws CPATransferException {
-    throw new UnsupportedCCodeException("Field Reference", this.cfaEdge);
+    return Sets.immutableEnumSet(CFAEdgeLabel.FIELD_REFERENCE);
   }
 
   @Override
@@ -184,6 +182,8 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
       throws CPATransferException {
     if(pIastIdExpression.getName().equals("__VERIFIER_error"))
       return Sets.immutableEnumSet(CFAEdgeLabel.VERIFIER_ERROR_CALL_ID);
+    if(pIastIdExpression.getName().startsWith("__VERIFIER_nondet"))
+      return Sets.immutableEnumSet(CFAEdgeLabel.VERIFIER_NONDET_ID);
     return Sets.immutableEnumSet(CFAEdgeLabel.ID);
   }
 
@@ -196,6 +196,6 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
   @Override
   public Set<CFAEdgeLabel> visit(CComplexCastExpression complexCastExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(CFAEdgeLabel.COMPLEX);
+    return Sets.immutableEnumSet(CFAEdgeLabel.COMPLEX_NUMBER);
   }
 }

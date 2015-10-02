@@ -44,7 +44,11 @@ public enum CFAEdgeLabel implements Serializable {
   BLANK,
   FUNC_CALL,
   FUNC_RETURN,
-
+  TYPE,
+  STRUCT,
+  UNION,
+  ENUM,
+  COMPLEX,
 
   // Types
   UNSIGNED,
@@ -53,6 +57,8 @@ public enum CFAEdgeLabel implements Serializable {
   PTR,
   VOID,
   ARRAY,
+  LONG,
+  FUNCTION_TYPE,
 
   // Expression
   COMPARISON,
@@ -61,11 +67,14 @@ public enum CFAEdgeLabel implements Serializable {
   BIT_OPERATION,
   LITERAL,
   ADDRESS,
+  FIELD_REFERENCE,
   SIZEOF,
   ID,
-  COMPLEX,
+  COMPLEX_NUMBER,
   ARRAY_SUBSCRIPT,
+  VERIFIER_ASSERT_CALL_ID,
   VERIFIER_ERROR_CALL_ID,
+  VERIFIER_NONDET_ID,
   TYPE_ID
 
 }

@@ -23,8 +23,6 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CComplexTypeDeclaration;
@@ -62,13 +60,19 @@ public class CSimpleDeclLabelVisitor
   @Override
   public Set<CFAEdgeLabel> visit(CComplexTypeDeclaration pDecl)
       throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.COMPLEX_NUMBER);
+    CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
+    pDecl.getType().accept(typeVisitor);
+    return Sets.immutableEnumSet(labels);
   }
 
   @Override
   public Set<CFAEdgeLabel> visit(CTypeDeclaration pDecl)
       throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type", this.cfaEdge);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.TYPE);
+    CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
+    labels.addAll(pDecl.getType().accept(typeVisitor));
+    return Sets.immutableEnumSet(labels);
   }
 
   @Override

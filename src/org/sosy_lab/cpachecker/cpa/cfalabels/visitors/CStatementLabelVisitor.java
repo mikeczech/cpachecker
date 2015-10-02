@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.sosy_lab.cpachecker.cfa.ast.c.CExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallAssignmentStatement;
@@ -74,10 +75,12 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
   @Override public Set<CFAEdgeLabel> visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    Set<CFAEdgeLabel> edgeLabels = Sets.immutableEnumSet(CFAEdgeLabel.ASSIGN, CFAEdgeLabel.FUNC_CALL);
+    Set<CFAEdgeLabel> edgeLabels = Sets.newHashSet(CFAEdgeLabel.ASSIGN, CFAEdgeLabel.FUNC_CALL);
     CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
-    Set<CFAEdgeLabel> leftExpLabels = pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor);
-    return Sets.union(edgeLabels, leftExpLabels);
+    edgeLabels.addAll(pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor));
+    CExpressionLabelVisitor nameExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
+    edgeLabels.addAll(pIastFunctionCallAssignmentStatement.getFunctionCallExpression().getFunctionNameExpression().accept(nameExpLabelVisitor));
+    return Sets.immutableEnumSet(edgeLabels);
   }
 
   @Override
@@ -86,6 +89,11 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
     Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.FUNC_CALL);
     CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
     labels.addAll(pIastFunctionCallStatement.getFunctionCallExpression().getFunctionNameExpression().accept(expLabelVisitor));
+    // add labels for arguments as well
+    for(CExpression paramExp : pIastFunctionCallStatement.getFunctionCallExpression().getParameterExpressions()) {
+      CExpressionLabelVisitor paramExpLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
+      labels.addAll(paramExp.accept(paramExpLabelVisitor));
+    }
     return Sets.immutableEnumSet(labels);
   }
 }
