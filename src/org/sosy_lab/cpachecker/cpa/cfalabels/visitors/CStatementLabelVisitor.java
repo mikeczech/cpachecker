@@ -64,7 +64,8 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
     CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
     CExpressionLabelVisitor rightExpLabelVisitor = new CExpressionLabelVisitor(this.cfaEdge);
     Set<CFAEdgeLabel> leftExpLabels = pIastExpressionAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor);
-    Set<CFAEdgeLabel> rightExpLabels = pIastExpressionAssignmentStatement.getRightHandSide().accept(rightExpLabelVisitor);
+    Set<CFAEdgeLabel> rightExpLabels = pIastExpressionAssignmentStatement.getRightHandSide().accept(
+        rightExpLabelVisitor);
     labels.addAll(leftExpLabels);
     labels.addAll(rightExpLabels);
     return Sets.immutableEnumSet(labels);
@@ -73,7 +74,7 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
   @Override public Set<CFAEdgeLabel> visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    Set<CFAEdgeLabel> edgeLabels = Sets.immutableEnumSet(CFAEdgeLabel.ASSIGN, CFAEdgeLabel.FUNC);
+    Set<CFAEdgeLabel> edgeLabels = Sets.immutableEnumSet(CFAEdgeLabel.ASSIGN, CFAEdgeLabel.FUNC_CALL);
     CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
     Set<CFAEdgeLabel> leftExpLabels = pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor);
     return Sets.union(edgeLabels, leftExpLabels);
@@ -82,6 +83,9 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
   @Override
   public Set<CFAEdgeLabel> visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    return Sets.immutableEnumSet(CFAEdgeLabel.FUNC);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.FUNC_CALL);
+    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
+    labels.addAll(pIastFunctionCallStatement.getFunctionCallExpression().getFunctionNameExpression().accept(expLabelVisitor));
+    return Sets.immutableEnumSet(labels);
   }
 }

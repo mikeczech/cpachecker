@@ -77,7 +77,7 @@ public class CFALabelsState
     b.put(pEdge.getPredecessor().getNodeNumber(),
           pEdge.getSuccessor().getNodeNumber(),
           pLabels);
-    b.putAll(cfaEdgeLabelMap);
+//    b.putAll(cfaEdgeLabelMap);
     return new CFALabelsState(b.build());
   }
 

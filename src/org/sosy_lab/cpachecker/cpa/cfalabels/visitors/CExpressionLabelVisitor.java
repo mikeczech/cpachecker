@@ -182,6 +182,8 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
   @Override
   public Set<CFAEdgeLabel> visit(CIdExpression pIastIdExpression)
       throws CPATransferException {
+    if(pIastIdExpression.getName().equals("__VERIFIER_error"))
+      return Sets.immutableEnumSet(CFAEdgeLabel.VERIFIER_ERROR_CALL_ID);
     return Sets.immutableEnumSet(CFAEdgeLabel.ID);
   }
 

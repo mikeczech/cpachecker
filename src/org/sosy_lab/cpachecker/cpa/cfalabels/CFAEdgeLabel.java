@@ -41,6 +41,10 @@ public enum CFAEdgeLabel implements Serializable {
   CAST,
   ASSIGN,
   RETURN,
+  BLANK,
+  FUNC_CALL,
+  FUNC_RETURN,
+
 
   // Types
   UNSIGNED,
@@ -61,6 +65,7 @@ public enum CFAEdgeLabel implements Serializable {
   ID,
   COMPLEX,
   ARRAY_SUBSCRIPT,
+  VERIFIER_ERROR_CALL_ID,
   TYPE_ID
 
 }

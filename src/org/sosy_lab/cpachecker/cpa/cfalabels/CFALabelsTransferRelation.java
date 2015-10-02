@@ -83,14 +83,14 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
       List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
-    throw new UnsupportedCodeException("FunctionCallEdge", cfaEdge);
+    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.FUNC_CALL));
   }
 
   @Override
   protected CFALabelsState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
       CFunctionSummaryEdge fnkCall, CFunctionCall summaryExpr,
       String callerFunctionName) throws CPATransferException {
-    throw new UnsupportedCodeException("FunctionReturnEdge", cfaEdge);
+    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.FUNC_RETURN));
   }
 
   @Override
@@ -118,7 +118,7 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
 
   @Override
   protected CFALabelsState handleBlankEdge(BlankEdge cfaEdge) {
-    return super.handleBlankEdge(cfaEdge);
+    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.BLANK));
   }
 
   @Override
