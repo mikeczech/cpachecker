@@ -85,12 +85,12 @@ public final class DOTBuilder {
     for (FunctionEntryNode fnode : cfa.getAllFunctionHeads()) {
       // If Array belongs to functionCall in Parameter, replace [].
       // If Name Contains '.' replace with '_'
-      sb.append("subgraph cluster_" + fnode.getFunctionName()
-          .replace("[", "").replace("]", "_array")
-          .replace(".", "_") + " {\n");
-      sb.append("label=\"" + fnode.getFunctionName() + "()\"\n");
+//      sb.append("subgraph cluster_" + fnode.getFunctionName()
+//          .replace("[", "").replace("]", "_array")
+//          .replace(".", "_") + " {\n");
+//      sb.append("label=\"" + fnode.getFunctionName() + "()\"\n");
       JOINER_ON_NEWLINE.appendTo(sb, dotGenerator.edges.get(fnode.getFunctionName()));
-      sb.append("}\n");
+//      sb.append("}\n");
     }
 
     JOINER_ON_NEWLINE.appendTo(sb, dotGenerator.edges.get(MAIN_GRAPH));
