@@ -133,10 +133,10 @@ public class BlockToDotWriter {
                          final List<CFAEdge> edges, final int depth) throws IOException {
     // todo use some block-identifier instead of index as blockname?
     final String blockname = (block == blockPartitioning.getMainBlock()) ? "main_block" : "block_" + (blockIndex++);
-    app.append("subgraph cluster_" + blockname + " {\n");
-    app.append("style=filled\n");
-    app.append("fillcolor=" + (depth%2 == 0 ? "white" : "lightgrey") + "\n");
-    app.append("label=\"" + blockname + "\"\n");
+//    app.append("subgraph cluster_" + blockname + " {\n");
+//    app.append("style=filled\n");
+//    app.append("fillcolor=" + (depth%2 == 0 ? "white" : "lightgrey") + "\n");
+//    app.append("label=\"" + blockname + "\"\n");
 
     // dump inner blocks
     for (Block innerBlock : hierarchy.get(block)) {
@@ -155,7 +155,7 @@ public class BlockToDotWriter {
       }
     }
 
-    app.append("}\n");
+//    app.append("}\n");
   }
 
   private String formatNode(CFANode node) {

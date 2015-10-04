@@ -89,8 +89,10 @@ public final class DOTBuilder {
 //          .replace("[", "").replace("]", "_array")
 //          .replace(".", "_") + " {\n");
 //      sb.append("label=\"" + fnode.getFunctionName() + "()\"\n");
-      JOINER_ON_NEWLINE.appendTo(sb, dotGenerator.edges.get(fnode.getFunctionName()));
+      JOINER_ON_NEWLINE.appendTo(sb,
+          dotGenerator.edges.get(fnode.getFunctionName()));
 //      sb.append("}\n");
+        sb.append("\n");
     }
 
     JOINER_ON_NEWLINE.appendTo(sb, dotGenerator.edges.get(MAIN_GRAPH));
@@ -136,20 +138,22 @@ public final class DOTBuilder {
 
     private static String formatEdge(CFAEdge edge) {
       StringBuilder sb = new StringBuilder();
-      sb.append(edge.getPredecessor().getNodeNumber());
-      sb.append(" -> ");
-      sb.append(edge.getSuccessor().getNodeNumber());
-      sb.append(" [label=\"");
+      if(!(edge instanceof FunctionSummaryEdge)) {
+        sb.append(edge.getPredecessor().getNodeNumber());
+        sb.append(" -> ");
+        sb.append(edge.getSuccessor().getNodeNumber());
+        sb.append(" [label=\"");
 
-      //the first call to replaceAll replaces \" with \ " to prevent a bug in dotty.
-      //future updates of dotty may make this obsolete.
-      sb.append(escapeGraphvizLabel(edge.getDescription(), " "));
+        //the first call to replaceAll replaces \" with \ " to prevent a bug in dotty.
+        //future updates of dotty may make this obsolete.
+        sb.append(escapeGraphvizLabel(edge.getDescription(), " "));
 
-      sb.append("\"");
-      if (edge instanceof FunctionSummaryEdge) {
-        sb.append(" style=\"dotted\" arrowhead=\"empty\"");
+        sb.append("\"");
+//      if (edge instanceof FunctionSummaryEdge) {
+//        sb.append(" style=\"dotted\" arrowhead=\"empty\"");
+//      }
+        sb.append("]");
       }
-      sb.append("]");
       return sb.toString();
     }
   }
