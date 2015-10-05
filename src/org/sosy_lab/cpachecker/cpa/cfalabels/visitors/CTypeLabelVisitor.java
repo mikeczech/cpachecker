@@ -142,7 +142,11 @@ public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATra
       labels.add(CFAEdgeLabel.UNSIGNED);
     switch(pSimpleType.getType()) {
       case BOOL:
+        labels.add(CFAEdgeLabel.BOOL);
+        break;
       case CHAR:
+        labels.add(CFAEdgeLabel.CHAR);
+        break;
       case INT:
         labels.add(CFAEdgeLabel.INT);
         break;
@@ -153,6 +157,10 @@ public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATra
       default:
         if(pSimpleType.isLong()) {
           labels.add(CFAEdgeLabel.LONG);
+          break;
+        }
+        if(pSimpleType.isShort()) {
+          labels.add(CFAEdgeLabel.SHORT);
           break;
         }
         throw new UnsupportedCCodeException("Unspecified declaration type: CSimpleType", this.cfaEdge);

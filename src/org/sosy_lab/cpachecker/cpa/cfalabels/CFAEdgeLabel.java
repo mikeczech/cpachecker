@@ -60,6 +60,9 @@ public enum CFAEdgeLabel implements Serializable {
   ARRAY,
   LONG,
   FUNCTION_TYPE,
+  SHORT,
+  BOOL,
+  CHAR,
 
   // Expression
   COMPARISON,
