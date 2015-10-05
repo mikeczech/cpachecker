@@ -153,7 +153,7 @@ public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATra
         labels.add(CFAEdgeLabel.FLOAT);
         break;
       default:
-        if(pSimpleType.isLong()) {
+        if(pSimpleType.isLong() || pSimpleType.isLongLong()) {
           labels.add(CFAEdgeLabel.LONG);
           break;
         }
