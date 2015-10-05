@@ -82,7 +82,12 @@ public enum CFAEdgeLabel implements Serializable {
   // Special
   VERIFIER_ASSERT,
   VERIFIER_ERROR,
+  VERIFIER_ASSUME,
+  VERIFIER_ATOMIC_BEGIN,
+  VERIFIER_ATOMIC_END,
   INPUT,
-  PTHREAD
+  PTHREAD,
+  MALLOC,
+  FREE
 
 }

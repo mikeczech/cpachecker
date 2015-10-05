@@ -48,6 +48,7 @@ import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Sets;
 
 /**
@@ -61,10 +62,23 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
     this.cfaEdge = cfaEdge;
   }
 
-  static final Map<String, CFAEdgeLabel> SPECIAL_FUNCTIONS
-      = ImmutableMap.of("__VERIFIER_error", CFAEdgeLabel.VERIFIER_ERROR,
-                        "__VERIFIER_nondet", CFAEdgeLabel.INPUT,
-                        "pthread_", CFAEdgeLabel.PTHREAD);
+  // TODO put this in one file
+  static final Map<String, CFAEdgeLabel> SPECIAL_FUNCTIONS;
+
+  static {
+    Builder<String, CFAEdgeLabel> builder = ImmutableMap.builder();
+    builder.put("pthread_create", CFAEdgeLabel.PTHREAD);
+    builder.put("pthread_exit", CFAEdgeLabel.PTHREAD);
+    builder.put("__VERIFIER_error", CFAEdgeLabel.VERIFIER_ERROR);
+    builder.put("__VERIFIER_assert", CFAEdgeLabel.VERIFIER_ASSERT);
+    builder.put("__VERIFIER_assume", CFAEdgeLabel.VERIFIER_ASSUME);
+    builder.put("__VERIFIER_atomic_begin", CFAEdgeLabel.VERIFIER_ATOMIC_BEGIN);
+    builder.put("__VERIFIER_atomic_end", CFAEdgeLabel.VERIFIER_ATOMIC_END);
+    builder.put("__VERIFIER_nondet", CFAEdgeLabel.INPUT);
+    builder.put("malloc", CFAEdgeLabel.MALLOC);
+    builder.put("free", CFAEdgeLabel.FREE);
+    SPECIAL_FUNCTIONS = builder.build();
+  }
 
   @Override
   public Set<CFAEdgeLabel> visit(CBinaryExpression pIastBinaryExpression)

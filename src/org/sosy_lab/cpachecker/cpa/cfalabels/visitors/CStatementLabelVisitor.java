@@ -23,8 +23,6 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpression;
