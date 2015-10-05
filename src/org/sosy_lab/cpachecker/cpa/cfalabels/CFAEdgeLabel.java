@@ -34,7 +34,6 @@ public enum CFAEdgeLabel implements Serializable {
 
   // Statements
   DECL,
-  STMT,
   VAR,
   FUNC,
   ASSUME_TRUE,

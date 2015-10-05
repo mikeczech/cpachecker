@@ -83,6 +83,8 @@ public class CSimpleDeclLabelVisitor
       if(pDecl.getName().startsWith(key))
         labels.add(SPECIAL_FUNCTIONS.get(key));
     }
+    CTypeLabelVisitor returntypeVisitor = new CTypeLabelVisitor(this.cfaEdge);
+    labels.addAll(pDecl.getType().getReturnType().accept(returntypeVisitor));
     for(CParameterDeclaration param : pDecl.getParameters()) {
       CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
       labels.addAll(param.getType().accept(typeVisitor));
