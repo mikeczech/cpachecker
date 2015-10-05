@@ -142,17 +142,17 @@ public final class DOTBuilder {
         sb.append(edge.getPredecessor().getNodeNumber());
         sb.append(" -> ");
         sb.append(edge.getSuccessor().getNodeNumber());
-//        sb.append(" [label=\"");
-//
-//        //the first call to replaceAll replaces \" with \ " to prevent a bug in dotty.
-//        //future updates of dotty may make this obsolete.
-//        sb.append(escapeGraphvizLabel(edge.getDescription(), " "));
-//
-//        sb.append("\"");
-//      if (edge instanceof FunctionSummaryEdge) {
-//        sb.append(" style=\"dotted\" arrowhead=\"empty\"");
-//      }
-//        sb.append("]");
+        sb.append(" [label=\"");
+
+        //the first call to replaceAll replaces \" with \ " to prevent a bug in dotty.
+        //future updates of dotty may make this obsolete.
+        sb.append(escapeGraphvizLabel(edge.getDescription(), " "));
+
+        sb.append("\"");
+      if (edge instanceof FunctionSummaryEdge) {
+        sb.append(" style=\"dotted\" arrowhead=\"empty\"");
+      }
+        sb.append("]");
       }
       return sb.toString();
     }

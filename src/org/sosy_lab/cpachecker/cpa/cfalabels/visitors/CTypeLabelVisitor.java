@@ -105,7 +105,7 @@ public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATra
 
   @Override
   public Set<CFAEdgeLabel> visit(CEnumType pEnumType) throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type: EnumType", this.cfaEdge);
+    return Sets.immutableEnumSet(CFAEdgeLabel.ENUM);
   }
 
   @Override
