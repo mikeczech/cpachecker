@@ -146,7 +146,7 @@ public final class DOTBuilder {
 
         //the first call to replaceAll replaces \" with \ " to prevent a bug in dotty.
         //future updates of dotty may make this obsolete.
-        sb.append(escapeGraphvizLabel(edge.getDescription(), " "));
+//        sb.append(escapeGraphvizLabel(edge.getDescription(), " "));
 
         sb.append("\"");
       if (edge instanceof FunctionSummaryEdge) {
