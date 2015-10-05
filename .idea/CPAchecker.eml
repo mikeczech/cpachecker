@@ -68,6 +68,7 @@
 	</lib>
 	<lib name="error_prone_annotations.jar" scope="COMPILE">
 		<srcroot url="file://lib/java-contrib/error_prone_annotations-sources.jar"/>
+		<relative-module-cls project-related="jar://$PROJECT_DIR$/lib/java/build/error_prone_annotations.jar!/"/>
 	</lib>
 	<lib name="objenesis.jar" scope="COMPILE">
 		<relative-module-cls project-related="jar://$PROJECT_DIR$/lib/java/test/objenesis.jar!/"/>

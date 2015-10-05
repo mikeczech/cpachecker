@@ -23,6 +23,7 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CComplexTypeDeclaration;
@@ -37,6 +38,7 @@ import org.sosy_lab.cpachecker.cpa.cfalabels.CFAEdgeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 /**
@@ -47,6 +49,12 @@ public class CSimpleDeclLabelVisitor
 
   private final CFAEdge cfaEdge;
 
+  static final Map<String, CFAEdgeLabel> SPECIAL_FUNCTIONS
+      = ImmutableMap.of("pthread_create", CFAEdgeLabel.PTHREAD,
+                        "pthread_exit", CFAEdgeLabel.PTHREAD,
+                        "__VERIFIER_error", CFAEdgeLabel.VERIFIER_ERROR,
+                        "__VERIFIER_assert", CFAEdgeLabel.VERIFIER_ASSERT);
+
   public CSimpleDeclLabelVisitor(CFAEdge cfaEdge) {
     this.cfaEdge = cfaEdge;
   }
@@ -54,15 +62,23 @@ public class CSimpleDeclLabelVisitor
   @Override
   public Set<CFAEdgeLabel> visit(CFunctionDeclaration pDecl)
       throws CPATransferException {
-    return Sets.immutableEnumSet(CFAEdgeLabel.FUNC);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.FUNC);
+    if(SPECIAL_FUNCTIONS.containsKey(pDecl.getName())) {
+      labels.add(SPECIAL_FUNCTIONS.get(pDecl.getName()));
+    }
+    for(CParameterDeclaration param : pDecl.getParameters()) {
+      CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
+      labels.addAll(param.getType().accept(typeVisitor));
+    }
+    return Sets.immutableEnumSet(labels);
   }
 
   @Override
   public Set<CFAEdgeLabel> visit(CComplexTypeDeclaration pDecl)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.COMPLEX_NUMBER);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.COMPLEX_TYPE);
     CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-    pDecl.getType().accept(typeVisitor);
+    labels.addAll(pDecl.getType().accept(typeVisitor));
     return Sets.immutableEnumSet(labels);
   }
 

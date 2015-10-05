@@ -37,7 +37,8 @@ public enum CFAEdgeLabel implements Serializable {
   STMT,
   VAR,
   FUNC,
-  ASSUME,
+  ASSUME_TRUE,
+  ASSUME_FALSE,
   CAST,
   ASSIGN,
   RETURN,
@@ -48,7 +49,7 @@ public enum CFAEdgeLabel implements Serializable {
   STRUCT,
   UNION,
   ENUM,
-  COMPLEX,
+  COMPLEX_TYPE,
 
   // Types
   UNSIGNED,
@@ -69,12 +70,16 @@ public enum CFAEdgeLabel implements Serializable {
   ADDRESS,
   FIELD_REFERENCE,
   SIZEOF,
+  MODULO,
   ID,
   COMPLEX_NUMBER,
   ARRAY_SUBSCRIPT,
-  VERIFIER_ASSERT_CALL_ID,
-  VERIFIER_ERROR_CALL_ID,
-  VERIFIER_NONDET_ID,
-  TYPE_ID
+  TYPE_ID,
+
+  // Special
+  VERIFIER_ASSERT,
+  VERIFIER_ERROR,
+  INPUT,
+  PTHREAD
 
 }

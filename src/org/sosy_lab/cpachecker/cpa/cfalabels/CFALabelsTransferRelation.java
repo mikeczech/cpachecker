@@ -23,7 +23,6 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -74,7 +73,7 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
       CExpression expression, boolean truthAssumption)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.ASSUME);
+    Set<CFAEdgeLabel> labels = Sets.newHashSet(truthAssumption ? CFAEdgeLabel.ASSUME_TRUE : CFAEdgeLabel.ASSUME_FALSE);
     CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
     return state.addEdgeLabel(cfaEdge, Sets.union(labels, expression.accept(expLabelVisitor)));
   }
@@ -84,7 +83,7 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
       List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
     if(calledFunctionName.equals("__VERIFIER_assert") || calledFunctionName.equals("assert")) {
-      Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.VERIFIER_ASSERT_CALL_ID);
+      Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.VERIFIER_ASSERT);
       for(CExpression arg : arguments) {
         CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
         labels.addAll(arg.accept(expLabelVisitor));

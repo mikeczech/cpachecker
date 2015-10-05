@@ -23,6 +23,7 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CAddressOfLabelExpression;
@@ -46,6 +47,7 @@ import org.sosy_lab.cpachecker.cpa.cfalabels.CFAEdgeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 /**
@@ -59,6 +61,11 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
     this.cfaEdge = cfaEdge;
   }
 
+  static final Map<String, CFAEdgeLabel> SPECIAL_FUNCTIONS
+      = ImmutableMap.of("__VERIFIER_error", CFAEdgeLabel.VERIFIER_ERROR,
+                        "__VERIFIER_nondet", CFAEdgeLabel.INPUT,
+                        "pthread_", CFAEdgeLabel.PTHREAD);
+
   @Override
   public Set<CFAEdgeLabel> visit(CBinaryExpression pIastBinaryExpression)
       throws CPATransferException {
@@ -66,7 +73,6 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
     switch(pIastBinaryExpression.getOperator()) {
       case MULTIPLY:
       case DIVIDE:
-      case MODULO:
       case PLUS:
       case MINUS:
         labels.add(CFAEdgeLabel.ARITHMETIC);
@@ -86,6 +92,9 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
       case SHIFT_RIGHT:
         labels.add(CFAEdgeLabel.BIT_OPERATION);
         break;
+      case MODULO:
+        labels.add(CFAEdgeLabel.MODULO);
+        break;
     }
     labels.addAll(pIastBinaryExpression.getOperand1().accept(this));
     labels.addAll(pIastBinaryExpression.getOperand2().accept(this));
@@ -97,7 +106,10 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
       throws CPATransferException {
     Set<CFAEdgeLabel> labels = Sets.newHashSet();
     labels.add(CFAEdgeLabel.CAST);
-    return Sets.union(labels, pIastCastExpression.getOperand().accept(this));
+    CTypeLabelVisitor typeLabelVisitor = new CTypeLabelVisitor(this.cfaEdge);
+    labels.addAll(pIastCastExpression.getCastType().accept(typeLabelVisitor));
+    labels.addAll(pIastCastExpression.getOperand().accept(this));
+    return Sets.immutableEnumSet(labels);
   }
 
   @Override
@@ -180,10 +192,13 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<Set<CFAEdgeLa
   @Override
   public Set<CFAEdgeLabel> visit(CIdExpression pIastIdExpression)
       throws CPATransferException {
-    if(pIastIdExpression.getName().equals("__VERIFIER_error"))
-      return Sets.immutableEnumSet(CFAEdgeLabel.VERIFIER_ERROR_CALL_ID);
-    if(pIastIdExpression.getName().startsWith("__VERIFIER_nondet"))
-      return Sets.immutableEnumSet(CFAEdgeLabel.VERIFIER_NONDET_ID);
+    if(SPECIAL_FUNCTIONS.containsKey(pIastIdExpression.getName())) {
+      return Sets.immutableEnumSet(SPECIAL_FUNCTIONS.get(pIastIdExpression.getName()));
+    }
+    for(String key : SPECIAL_FUNCTIONS.keySet()) {
+      if(pIastIdExpression.getName().startsWith(key))
+        return Sets.immutableEnumSet(SPECIAL_FUNCTIONS.get(key));
+    }
     return Sets.immutableEnumSet(CFAEdgeLabel.ID);
   }
 
