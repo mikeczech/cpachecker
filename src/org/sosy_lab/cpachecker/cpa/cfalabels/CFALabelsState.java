@@ -61,7 +61,7 @@ public class CFALabelsState
     return builder.toString();
   }
 
-  @Overrefdefeddffffggterfrefehi
+  @Override
   public boolean equals(Object pObj) {
     if (!(pObj instanceof CFALabelsState))
       return false;
