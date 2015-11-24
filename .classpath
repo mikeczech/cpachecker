@@ -36,5 +36,6 @@
 	<classpathentry kind="lib" path="lib/java/runtime/princess.jar"/>
 	<classpathentry kind="lib" path="lib/java/runtime/scala-library.jar"/>
 	<classpathentry kind="lib" path="lib/java/runtime/scala-actors.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/org.jgrapht:jgrapht-core:0.9.1"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

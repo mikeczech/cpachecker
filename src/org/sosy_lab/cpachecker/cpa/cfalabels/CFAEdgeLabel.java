@@ -51,6 +51,7 @@ public enum CFAEdgeLabel implements Serializable {
   COMPLEX_TYPE,
 
   // Types
+  VOLATILE,
   UNSIGNED,
   INT,
   FLOAT,

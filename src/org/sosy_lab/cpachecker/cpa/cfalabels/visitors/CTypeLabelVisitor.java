@@ -161,6 +161,15 @@ public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATra
           labels.add(CFAEdgeLabel.SHORT);
           break;
         }
+        if(pSimpleType.isVolatile()) {
+          labels.add(CFAEdgeLabel.VOLATILE);
+          break;
+        }
+        // Can be used as standalone type?
+        if(pSimpleType.isUnsigned()) {
+          labels.add(CFAEdgeLabel.UNSIGNED);
+          break;
+        }
         throw new UnsupportedCCodeException("Unspecified declaration type: CSimpleType", this.cfaEdge);
     }
     return Sets.immutableEnumSet(labels);

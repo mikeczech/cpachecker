@@ -114,4 +114,7 @@
 	<lib name="scala-actors.jar" scope="COMPILE">
 		<relative-module-cls project-related="jar://$PROJECT_DIR$/lib/java/runtime/scala-actors.jar!/"/>
 	</lib>
+	<levels>
+		<level name="org.jgrapht:jgrapht-core:0.9.1" value="project"/>
+	</levels>
 </component>
