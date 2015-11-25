@@ -90,6 +90,7 @@ public enum GMNodeLabel implements Serializable {
   FUNC_CALL_ASSIGN,
   PARAMS,
   FUNC_CALL,
+  GLOBAL,
 
 
 

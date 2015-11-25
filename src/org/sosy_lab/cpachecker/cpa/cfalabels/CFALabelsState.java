@@ -26,6 +26,7 @@ package org.sosy_lab.cpachecker.cpa.cfalabels;
 import java.io.Serializable;
 import java.io.StringWriter;
 
+import org.jgrapht.graph.DefaultDirectedGraph;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Graphable;
@@ -47,10 +48,10 @@ public class CFALabelsState
   private CFALabelsState() {
     this.source = -1;
     this.target = -1;
-    this.tree = null;
+    this.tree = new ASTree();
   }
 
-  private CFALabelsState(CFAEdge pEdge, ASTree pTree) {
+  public CFALabelsState(CFAEdge pEdge, ASTree pTree) {
     this.source = pEdge.getPredecessor().getNodeNumber();
     this.target = pEdge.getSuccessor().getNodeNumber();
     this.tree = pTree;
@@ -60,7 +61,7 @@ public class CFALabelsState
   public String toString() {
     StringWriter strWriter = new StringWriter();
     DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>();
-    dotExp.export(strWriter, this.tree.getTree());
+    dotExp.export(strWriter, this.tree.asGraph());
     return strWriter.toString();
   }
 
