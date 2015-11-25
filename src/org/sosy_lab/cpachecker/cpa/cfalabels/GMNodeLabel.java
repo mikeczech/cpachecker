@@ -86,6 +86,10 @@ public enum GMNodeLabel implements Serializable {
   FIELD_REF,
   FIELD_POINTER_DEREF,
   POINTER_EXPRESSION,
+  ASSIGNMENT,
+  FUNC_CALL_ASSIGN,
+  PARAMS,
+  FUNC_CALL,
 
 
 
@@ -100,7 +104,6 @@ public enum GMNodeLabel implements Serializable {
   ASSIGN,
   RETURN,
   BLANK,
-  FUNC_CALL,
   FUNC_RETURN,
   TYPE,
   STRUCT,

@@ -32,6 +32,8 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CStatementVisitor;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
+import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
 import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 
@@ -40,7 +42,7 @@ import com.google.common.collect.Sets;
 /**
  * Created by zenscr on 01/10/15.
  */
-public class CStatementLabelVisitor implements CStatementVisitor<Set<GMNodeLabel>, CPATransferException> {
+public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
@@ -49,49 +51,53 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<GMNodeLabel
   }
 
   @Override
-  public Set<GMNodeLabel> visit(CExpressionStatement pIastExpressionStatement)
+  public ASTree visit(CExpressionStatement pIastExpressionStatement)
       throws CPATransferException {
-    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(this.cfaEdge);
-    return pIastExpressionStatement.getExpression().accept(expLabelVisitor);
+    return pIastExpressionStatement.getExpression().accept(
+        new CExpressionLabelVisitor(this.cfaEdge));
   }
 
   @Override
-  public Set<GMNodeLabel> visit(
+  public ASTree visit(
       CExpressionAssignmentStatement pIastExpressionAssignmentStatement)
       throws CPATransferException {
-    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.ASSIGN);
-    CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
-    CExpressionLabelVisitor rightExpLabelVisitor = new CExpressionLabelVisitor(this.cfaEdge);
-    Set<GMNodeLabel> leftExpLabels = pIastExpressionAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor);
-    Set<GMNodeLabel> rightExpLabels = pIastExpressionAssignmentStatement.getRightHandSide().accept(
-        rightExpLabelVisitor);
-    labels.addAll(leftExpLabels);
-    labels.addAll(rightExpLabels);
-    return Sets.immutableEnumSet(labels);
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ASSIGNMENT));
+    ASTree leftTree = pIastExpressionAssignmentStatement.getLeftHandSide().accept(
+        new CExpressionLabelVisitor(this.cfaEdge));
+    tree.addTree(leftTree);
+    ASTree rightTree = pIastExpressionAssignmentStatement.getRightHandSide().accept(
+        new CExpressionLabelVisitor(this.cfaEdge));
+    tree.addTree(rightTree);
+    return tree;
   }
 
-  @Override public Set<GMNodeLabel> visit(
+  @Override public ASTree visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    Set<GMNodeLabel> edgeLabels = Sets.newHashSet(GMNodeLabel.ASSIGN, GMNodeLabel.FUNC_CALL);
-    CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
-    edgeLabels.addAll(pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor));
-    CExpressionLabelVisitor nameExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
-    edgeLabels.addAll(pIastFunctionCallAssignmentStatement.getFunctionCallExpression().getFunctionNameExpression().accept(nameExpLabelVisitor));
-    return Sets.immutableEnumSet(edgeLabels);
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL_ASSIGN));
+    ASTree leftTree = pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(
+        new CExpressionLabelVisitor(this.cfaEdge));
+    tree.addTree(leftTree);
+    ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
+    for(CExpression paramExp : pIastFunctionCallAssignmentStatement.getRightHandSide().getParameterExpressions()) {
+      ASTree paramExpTree = paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
+      paramsTree.addTree(paramExpTree);
+    }
+    tree.addTree(paramsTree);
+    return tree;
   }
 
   @Override
-  public Set<GMNodeLabel> visit(CFunctionCallStatement pIastFunctionCallStatement)
+  public ASTree visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.FUNC_CALL);
-    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
-    labels.addAll(pIastFunctionCallStatement.getFunctionCallExpression().getFunctionNameExpression().accept(expLabelVisitor));
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL));
     // add labels for arguments as well
+    ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
     for(CExpression paramExp : pIastFunctionCallStatement.getFunctionCallExpression().getParameterExpressions()) {
-      CExpressionLabelVisitor paramExpLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
-      labels.addAll(paramExp.accept(paramExpLabelVisitor));
+      ASTree paramExpTree = paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
+      paramsTree.addTree(paramExpTree);
     }
-    return Sets.immutableEnumSet(labels);
+    tree.addTree(paramsTree);
+    return tree;
   }
 }
