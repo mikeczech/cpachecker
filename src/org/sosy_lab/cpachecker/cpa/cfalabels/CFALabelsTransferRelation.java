@@ -66,20 +66,20 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
     logger = pLogger;
   }
 
-  static final Map<String, CFAEdgeLabel> SPECIAL_FUNCTIONS;
+  static final Map<String, GMNodeLabel> SPECIAL_FUNCTIONS;
 
   static {
-    Builder<String, CFAEdgeLabel> builder = ImmutableMap.builder();
-    builder.put("pthread_create", CFAEdgeLabel.PTHREAD);
-    builder.put("pthread_exit", CFAEdgeLabel.PTHREAD);
-    builder.put("__VERIFIER_error", CFAEdgeLabel.VERIFIER_ERROR);
-    builder.put("__VERIFIER_assert", CFAEdgeLabel.VERIFIER_ASSERT);
-    builder.put("__VERIFIER_assume", CFAEdgeLabel.VERIFIER_ASSUME);
-    builder.put("__VERIFIER_atomic_begin", CFAEdgeLabel.VERIFIER_ATOMIC_BEGIN);
-    builder.put("__VERIFIER_atomic_end", CFAEdgeLabel.VERIFIER_ATOMIC_END);
-    builder.put("__VERIFIER_nondet", CFAEdgeLabel.INPUT);
-    builder.put("malloc", CFAEdgeLabel.MALLOC);
-    builder.put("free", CFAEdgeLabel.FREE);
+    Builder<String, GMNodeLabel> builder = ImmutableMap.builder();
+    builder.put("pthread_create", GMNodeLabel.PTHREAD);
+    builder.put("pthread_exit", GMNodeLabel.PTHREAD);
+    builder.put("__VERIFIER_error", GMNodeLabel.VERIFIER_ERROR);
+    builder.put("__VERIFIER_assert", GMNodeLabel.VERIFIER_ASSERT);
+    builder.put("__VERIFIER_assume", GMNodeLabel.VERIFIER_ASSUME);
+    builder.put("__VERIFIER_atomic_begin", GMNodeLabel.VERIFIER_ATOMIC_BEGIN);
+    builder.put("__VERIFIER_atomic_end", GMNodeLabel.VERIFIER_ATOMIC_END);
+    builder.put("__VERIFIER_nondet", GMNodeLabel.INPUT);
+    builder.put("malloc", GMNodeLabel.MALLOC);
+    builder.put("free", GMNodeLabel.FREE);
     SPECIAL_FUNCTIONS = builder.build();
   }
 
@@ -89,68 +89,68 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
     return null;
   }
 
-  @Override
-  protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
-      CExpression expression, boolean truthAssumption)
-      throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(truthAssumption ? CFAEdgeLabel.ASSUME_TRUE : CFAEdgeLabel.ASSUME_FALSE);
-    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
-    return state.addEdgeLabel(cfaEdge, Sets.union(labels, expression.accept(expLabelVisitor)));
-  }
-
-  @Override
-  protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
-      List<CExpression> arguments, List<CParameterDeclaration> parameters,
-      String calledFunctionName) throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.FUNC_CALL);
-    if(SPECIAL_FUNCTIONS.containsKey(calledFunctionName)) {
-      labels.add(SPECIAL_FUNCTIONS.get(calledFunctionName));
-    }
-    for(String key : SPECIAL_FUNCTIONS.keySet()) {
-      if(calledFunctionName.startsWith(key))
-        labels.add(SPECIAL_FUNCTIONS.get(key));
-    }
-    for(CExpression arg : arguments) {
-      CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
-      labels.addAll(arg.accept(expLabelVisitor));
-    }
-    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(labels));
-  }
-
-  @Override
-  protected CFALabelsState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
-      CFunctionSummaryEdge fnkCall, CFunctionCall summaryExpr,
-      String callerFunctionName) throws CPATransferException {
-    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.FUNC_RETURN));
-  }
+//  @Override
+//  protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
+//      CExpression expression, boolean truthAssumption)
+//      throws CPATransferException {
+//    Set<GMNodeLabel> labels = Sets.newHashSet(truthAssumption ? GMNodeLabel.ASSUME_TRUE : GMNodeLabel.ASSUME_FALSE);
+//    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
+//    return state.addEdgeLabel(cfaEdge, Sets.union(labels, expression.accept(expLabelVisitor)));
+//  }
+//
+//  @Override
+//  protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
+//      List<CExpression> arguments, List<CParameterDeclaration> parameters,
+//      String calledFunctionName) throws CPATransferException {
+//    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.FUNC_CALL);
+//    if(SPECIAL_FUNCTIONS.containsKey(calledFunctionName)) {
+//      labels.add(SPECIAL_FUNCTIONS.get(calledFunctionName));
+//    }
+//    for(String key : SPECIAL_FUNCTIONS.keySet()) {
+//      if(calledFunctionName.startsWith(key))
+//        labels.add(SPECIAL_FUNCTIONS.get(key));
+//    }
+//    for(CExpression arg : arguments) {
+//      CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
+//      labels.addAll(arg.accept(expLabelVisitor));
+//    }
+//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(labels));
+//  }
+//
+//  @Override
+//  protected CFALabelsState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
+//      CFunctionSummaryEdge fnkCall, CFunctionCall summaryExpr,
+//      String callerFunctionName) throws CPATransferException {
+//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(GMNodeLabel.FUNC_RETURN));
+//  }
 
   @Override
   protected CFALabelsState handleDeclarationEdge(CDeclarationEdge cfaEdge,
       CDeclaration decl) throws CPATransferException {
     CSimpleDeclLabelVisitor declVisitor = new CSimpleDeclLabelVisitor(cfaEdge);
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.DECL);
+    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.DECL);
     return state.addEdgeLabel(cfaEdge, Sets.union(labels, decl.accept(declVisitor)));
   }
+//
+//  @Override
+//  protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
+//      CStatement statement) throws CPATransferException {
+//    CStatementLabelVisitor statementLabelVisitor = new CStatementLabelVisitor(cfaEdge);
+//    Set<GMNodeLabel> labels = Sets.newHashSet();
+//    return state.addEdgeLabel(cfaEdge, Sets.union(labels,
+//        statement.accept(statementLabelVisitor)));
+//  }
 
-  @Override
-  protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
-      CStatement statement) throws CPATransferException {
-    CStatementLabelVisitor statementLabelVisitor = new CStatementLabelVisitor(cfaEdge);
-    Set<CFAEdgeLabel> labels = Sets.newHashSet();
-    return state.addEdgeLabel(cfaEdge, Sets.union(labels,
-        statement.accept(statementLabelVisitor)));
-  }
-
-  @Override
-  protected CFALabelsState handleReturnStatementEdge(
-      CReturnStatementEdge cfaEdge) throws CPATransferException {
-    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.RETURN));
-  }
-
-  @Override
-  protected CFALabelsState handleBlankEdge(BlankEdge cfaEdge) {
-    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(CFAEdgeLabel.BLANK));
-  }
+//  @Override
+//  protected CFALabelsState handleReturnStatementEdge(
+//      CReturnStatementEdge cfaEdge) throws CPATransferException {
+//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(GMNodeLabel.RETURN));
+//  }
+//
+//  @Override
+//  protected CFALabelsState handleBlankEdge(BlankEdge cfaEdge) {
+//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(GMNodeLabel.BLANK));
+//  }
 
   @Override
   protected CFALabelsState handleFunctionSummaryEdge(

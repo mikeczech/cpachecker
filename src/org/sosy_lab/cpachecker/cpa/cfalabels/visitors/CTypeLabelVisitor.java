@@ -39,7 +39,11 @@ import org.sosy_lab.cpachecker.cfa.types.c.CType;
 import org.sosy_lab.cpachecker.cfa.types.c.CTypeVisitor;
 import org.sosy_lab.cpachecker.cfa.types.c.CTypedefType;
 import org.sosy_lab.cpachecker.cfa.types.c.CVoidType;
-import org.sosy_lab.cpachecker.cpa.cfalabels.CFAEdgeLabel;
+import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdge;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdgeLabel;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
@@ -48,7 +52,7 @@ import com.google.common.collect.Sets;
 /**
  * Created by zenscr on 30/09/15.
  */
-public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATransferException> {
+public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
@@ -57,134 +61,210 @@ public class CTypeLabelVisitor implements CTypeVisitor<Set<CFAEdgeLabel>, CPATra
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CArrayType pArrayType) throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.ARRAY);
-    labels.addAll(pArrayType.getType().accept(this));
-    return Sets.immutableEnumSet(labels);
+  public ASTree visit(CArrayType pArrayType) throws CPATransferException {
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ARRAY));
+    GMNode root = tree.getRoot();
+
+    if(pArrayType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pArrayType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
+    ASTree typeTree = pArrayType.getType().accept(
+        new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(typeTree, new GMNode(GMNodeLabel.TYPE));
+
+    ASTree lengthTree = pArrayType.getLength().accept(
+        new CExpressionLabelVisitor(this.cfaEdge));
+    tree.addTree(lengthTree, new GMNode(GMNodeLabel.LENGTH));
+
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CCompositeType pCompositeType)
+  public ASTree visit(CCompositeType pCompositeType)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet();
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.COMPOSITE_TYPE));
+    GMNode root = tree.getRoot();
+
+    if(pCompositeType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pCompositeType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
     switch (pCompositeType.getKind()) {
       case ENUM:
-        labels.add(CFAEdgeLabel.ENUM);
+        root.addLabel(GMNodeLabel.ENUM);
         break;
       case STRUCT:
-        labels.add(CFAEdgeLabel.STRUCT);
+        root.addLabel(GMNodeLabel.STRUCT);
         break;
       case UNION:
-        labels.add(CFAEdgeLabel.UNION);
+        root.addLabel(GMNodeLabel.UNION);
     }
     for(CCompositeTypeMemberDeclaration decl : pCompositeType.getMembers()) {
-      CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-      labels.addAll(decl.getType().accept(typeVisitor));
+      ASTree compTypeMemberTypeTree = decl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+      tree.addTree(compTypeMemberTypeTree);
     }
-    return Sets.immutableEnumSet(labels);
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CElaboratedType pElaboratedType)
+  public ASTree visit(CElaboratedType pElaboratedType)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet();
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ELABORATED_TYPE));
+    GMNode root = tree.getRoot();
+
+    if(pElaboratedType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pElaboratedType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
     switch (pElaboratedType.getKind()) {
       case ENUM:
-        labels.add(CFAEdgeLabel.ENUM);
+        root.addLabel(GMNodeLabel.ENUM);
         break;
       case STRUCT:
-        labels.add(CFAEdgeLabel.STRUCT);
+        root.addLabel(GMNodeLabel.STRUCT);
         break;
       case UNION:
-        labels.add(CFAEdgeLabel.UNION);
+        root.addLabel(GMNodeLabel.UNION);
     }
-    return Sets.immutableEnumSet(labels);
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CEnumType pEnumType) throws CPATransferException {
-    return Sets.immutableEnumSet(CFAEdgeLabel.ENUM);
+  public ASTree visit(CEnumType pEnumType) throws CPATransferException {
+    throw new UnsupportedCCodeException("Unspecified declaration type: CEnumType", this.cfaEdge);
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CFunctionType pFunctionType)
+  public ASTree visit(CFunctionType pFunctionType)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.FUNCTION_TYPE);
-    CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-    labels.addAll(pFunctionType.getReturnType().accept(typeVisitor));
-    pFunctionType.getCanonicalType().getReturnType();
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNCTION_TYPE));
+    GMNode root = tree.getRoot();
+
+    if(pFunctionType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pFunctionType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
+    ASTree paramTypeTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
     for(CType type : pFunctionType.getParameters()) {
-      CTypeLabelVisitor paramTypeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-      labels.addAll(type.accept(paramTypeVisitor));
+      ASTree typeTree = type.accept(new CTypeLabelVisitor(this.cfaEdge));
+      paramTypeTree.addTree(typeTree);
     }
-    return Sets.immutableEnumSet(labels);
+    tree.addTree(paramTypeTree);
+    ASTree returnTypeTree = pFunctionType.getReturnType().accept(
+        new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(returnTypeTree, new GMNode(GMNodeLabel.RETURN_TYPE));
+
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CPointerType pPointerType)
+  public ASTree visit(CPointerType pPointerType)
       throws CPATransferException {
-    return Sets.union(pPointerType.getType().accept(this), Sets.immutableEnumSet(CFAEdgeLabel.PTR));
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.POINTER_TYPE));
+    GMNode root = tree.getRoot();
+
+    if(pPointerType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pPointerType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
+    ASTree typeTree = pPointerType.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(typeTree);
+
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CProblemType pProblemType)
+  public ASTree visit(CProblemType pProblemType)
       throws CPATransferException {
     throw new UnsupportedCCodeException("Unspecified declaration type: ProblemType", this.cfaEdge);
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CSimpleType pSimpleType)
+  public ASTree visit(CSimpleType pSimpleType)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet();
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.SIMPLE_TYPE));
+    GMNode root = tree.getRoot();
+
+    if(pSimpleType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pSimpleType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
+    ASTree typeTree = new ASTree(new GMNode());
+    GMNode typeTreeRoot = typeTree.getRoot();
     if(pSimpleType.isUnsigned())
-      labels.add(CFAEdgeLabel.UNSIGNED);
+      typeTreeRoot.addLabel(GMNodeLabel.UNSIGNED);
     switch(pSimpleType.getType()) {
       case BOOL:
-        labels.add(CFAEdgeLabel.BOOL);
+        typeTreeRoot.addLabel(GMNodeLabel.BOOL);
         break;
       case CHAR:
-        labels.add(CFAEdgeLabel.CHAR);
+        typeTreeRoot.addLabel(GMNodeLabel.CHAR);
         break;
       case INT:
-        labels.add(CFAEdgeLabel.INT);
+        typeTreeRoot.addLabel(GMNodeLabel.INT);
         break;
       case FLOAT:
+        typeTreeRoot.addLabel(GMNodeLabel.FLOAT);
+        break;
       case DOUBLE:
-        labels.add(CFAEdgeLabel.FLOAT);
+        typeTreeRoot.addLabel(GMNodeLabel.DOUBLE);
         break;
       default:
-        if(pSimpleType.isLong() || pSimpleType.isLongLong()) {
-          labels.add(CFAEdgeLabel.LONG);
+        if(pSimpleType.isLong()) {
+          typeTreeRoot.addLabel(GMNodeLabel.LONG);
+          break;
+        }
+        if(pSimpleType.isLongLong()) {
+          typeTreeRoot.addLabel(GMNodeLabel.LONGLONG);
           break;
         }
         if(pSimpleType.isShort()) {
-          labels.add(CFAEdgeLabel.SHORT);
+          typeTreeRoot.addLabel(GMNodeLabel.SHORT);
           break;
         }
         if(pSimpleType.isVolatile()) {
-          labels.add(CFAEdgeLabel.VOLATILE);
+          typeTreeRoot.addLabel(GMNodeLabel.VOLATILE);
           break;
         }
         // Can be used as standalone type?
         if(pSimpleType.isUnsigned()) {
-          labels.add(CFAEdgeLabel.UNSIGNED);
+          typeTreeRoot.addLabel(GMNodeLabel.UNSIGNED);
           break;
         }
         throw new UnsupportedCCodeException("Unspecified declaration type: CSimpleType", this.cfaEdge);
     }
-    return Sets.immutableEnumSet(labels);
+    tree.addTree(typeTree);
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CTypedefType pTypedefType)
+  public ASTree visit(CTypedefType pTypedefType)
       throws CPATransferException {
-    return pTypedefType.getRealType().accept(this);
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.TYPEDEF_TYPE));
+    ASTree realTypeTree = pTypedefType.getRealType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(realTypeTree, new GMNode(GMNodeLabel.REAL_TYPE));
+    return tree;
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CVoidType pVoidType)
+  public ASTree visit(CVoidType pVoidType)
       throws CPATransferException {
-    return Sets.immutableEnumSet(CFAEdgeLabel.VOID);
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.VOID_TYPE));
+    GMNode root = tree.getRoot();
+
+    if(pVoidType.isConst())
+      root.addLabel(GMNodeLabel.CONST);
+    if(pVoidType.isVolatile())
+      root.addLabel(GMNodeLabel.VOLATILE);
+
+    return tree;
   }
 
 }

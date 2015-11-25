@@ -32,7 +32,7 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CStatementVisitor;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
-import org.sosy_lab.cpachecker.cpa.cfalabels.CFAEdgeLabel;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 
 import com.google.common.collect.Sets;
@@ -40,7 +40,7 @@ import com.google.common.collect.Sets;
 /**
  * Created by zenscr on 01/10/15.
  */
-public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabel>, CPATransferException> {
+public class CStatementLabelVisitor implements CStatementVisitor<Set<GMNodeLabel>, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
@@ -49,31 +49,31 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CExpressionStatement pIastExpressionStatement)
+  public Set<GMNodeLabel> visit(CExpressionStatement pIastExpressionStatement)
       throws CPATransferException {
     CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(this.cfaEdge);
     return pIastExpressionStatement.getExpression().accept(expLabelVisitor);
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(
+  public Set<GMNodeLabel> visit(
       CExpressionAssignmentStatement pIastExpressionAssignmentStatement)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.ASSIGN);
+    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.ASSIGN);
     CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
     CExpressionLabelVisitor rightExpLabelVisitor = new CExpressionLabelVisitor(this.cfaEdge);
-    Set<CFAEdgeLabel> leftExpLabels = pIastExpressionAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor);
-    Set<CFAEdgeLabel> rightExpLabels = pIastExpressionAssignmentStatement.getRightHandSide().accept(
+    Set<GMNodeLabel> leftExpLabels = pIastExpressionAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor);
+    Set<GMNodeLabel> rightExpLabels = pIastExpressionAssignmentStatement.getRightHandSide().accept(
         rightExpLabelVisitor);
     labels.addAll(leftExpLabels);
     labels.addAll(rightExpLabels);
     return Sets.immutableEnumSet(labels);
   }
 
-  @Override public Set<CFAEdgeLabel> visit(
+  @Override public Set<GMNodeLabel> visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    Set<CFAEdgeLabel> edgeLabels = Sets.newHashSet(CFAEdgeLabel.ASSIGN, CFAEdgeLabel.FUNC_CALL);
+    Set<GMNodeLabel> edgeLabels = Sets.newHashSet(GMNodeLabel.ASSIGN, GMNodeLabel.FUNC_CALL);
     CExpressionLabelVisitor leftExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
     edgeLabels.addAll(pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(leftExpLabelVisitor));
     CExpressionLabelVisitor nameExpLabelVisitor  = new CExpressionLabelVisitor(this.cfaEdge);
@@ -82,9 +82,9 @@ public class CStatementLabelVisitor implements CStatementVisitor<Set<CFAEdgeLabe
   }
 
   @Override
-  public Set<CFAEdgeLabel> visit(CFunctionCallStatement pIastFunctionCallStatement)
+  public Set<GMNodeLabel> visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    Set<CFAEdgeLabel> labels = Sets.newHashSet(CFAEdgeLabel.FUNC_CALL);
+    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.FUNC_CALL);
     CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
     labels.addAll(pIastFunctionCallStatement.getFunctionCallExpression().getFunctionNameExpression().accept(expLabelVisitor));
     // add labels for arguments as well

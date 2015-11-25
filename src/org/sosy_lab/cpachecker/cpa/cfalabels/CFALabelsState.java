@@ -24,66 +24,59 @@
 package org.sosy_lab.cpachecker.cpa.cfalabels;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Set;
+import java.io.StringWriter;
 
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Graphable;
 
-import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.ImmutableTable.Builder;
-import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
+import org.jgrapht.ext.DOTExporter;
 
 
 public class CFALabelsState
     implements Serializable, AbstractState, Graphable {
 
-  private Table<Integer, Integer, Set<CFAEdgeLabel>> cfaEdgeLabelMap;
+  private int source;
+
+  private int target;
+
+  private ASTree tree;
 
   public final static CFALabelsState TOP = new CFALabelsState();
 
   private CFALabelsState() {
-    cfaEdgeLabelMap = ImmutableTable.of();
+    this.source = -1;
+    this.target = -1;
+    this.tree = null;
   }
 
-  private CFALabelsState(Table<Integer, Integer, Set<CFAEdgeLabel>> pCfaEdgeLabelMap) {
-    cfaEdgeLabelMap = pCfaEdgeLabelMap;
+  private CFALabelsState(CFAEdge pEdge, ASTree pTree) {
+    this.source = pEdge.getPredecessor().getNodeNumber();
+    this.target = pEdge.getSuccessor().getNodeNumber();
+    this.tree = pTree;
   }
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder();
-    for(Cell<Integer, Integer, Set<CFAEdgeLabel>> cell : cfaEdgeLabelMap.cellSet()) {
-      builder.append(String.format("[%d, %d, %s]", cell.getRowKey(), cell.getColumnKey(), cell.getValue().toString()));
-    }
-    return builder.toString();
+    StringWriter strWriter = new StringWriter();
+    DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>();
+    dotExp.export(strWriter, this.tree.getTree());
+    return strWriter.toString();
   }
 
   @Override
   public boolean equals(Object pObj) {
     if (!(pObj instanceof CFALabelsState))
       return false;
-    return ((CFALabelsState) pObj).cfaEdgeLabelMap.equals(
-        this.cfaEdgeLabelMap);
-  }
-
-  public CFALabelsState addEdgeLabel(CFAEdge pEdge, Set<CFAEdgeLabel> pLabels) {
-    if(cfaEdgeLabelMap.contains(
-        pEdge.getPredecessor().getNodeNumber(), pEdge.getSuccessor().getNodeNumber()))
-        return this;
-    Builder<Integer, Integer, Set<CFAEdgeLabel>> b = ImmutableTable.builder();
-    b.put(pEdge.getPredecessor().getNodeNumber(),
-          pEdge.getSuccessor().getNodeNumber(),
-          pLabels);
-//    b.putAll(cfaEdgeLabelMap);
-    return new CFALabelsState(b.build());
+    return ((CFALabelsState) pObj).source == this.source
+        && ((CFALabelsState) pObj).target == this.target;
   }
 
   @Override
   public int hashCode() {
-    return cfaEdgeLabelMap.hashCode();
+    int result = source;
+    result = 31 * result + target;
+    return result;
   }
 
   @Override

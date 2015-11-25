@@ -30,7 +30,25 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 
-public enum CFAEdgeLabel implements Serializable {
+public enum GMNodeLabel implements Serializable {
+
+  // New
+  VariableDecl,
+  TypeDecl,
+  ComplexTypeDecl,
+  FunctionDecl,
+  PARAM_TYPES,
+  LENGTH,
+  COMPOSITE_TYPE,
+  ELABORATED_TYPE,
+  RETURN_TYPE,
+  POINTER_TYPE,
+  SIMPLE_TYPE,
+  TYPEDEF_TYPE,
+  REAL_TYPE,
+  VOID_TYPE,
+
+
 
   // Statements
   DECL,
@@ -54,15 +72,18 @@ public enum CFAEdgeLabel implements Serializable {
   VOLATILE,
   UNSIGNED,
   INT,
+  DOUBLE,
   FLOAT,
   PTR,
   VOID,
   ARRAY,
   LONG,
+  LONGLONG,
   FUNCTION_TYPE,
   SHORT,
   BOOL,
   CHAR,
+  CONST,
 
   // Expression
   COMPARISON,
