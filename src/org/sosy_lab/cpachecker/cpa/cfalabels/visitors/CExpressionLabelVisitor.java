@@ -23,9 +23,11 @@
  */
 package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
 
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.jdt.core.dom.AST;
 import org.sosy_lab.cpachecker.cfa.ast.c.CAddressOfLabelExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CArraySubscriptExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CBinaryExpression;
@@ -44,6 +46,7 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CTypeIdExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CUnaryExpression;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
+import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
 import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
@@ -84,148 +87,202 @@ public class CExpressionLabelVisitor implements CExpressionVisitor<ASTree, CPATr
   @Override
   public ASTree visit(CBinaryExpression pIastBinaryExpression)
       throws CPATransferException {
-    ASTree labels = Sets.newHashSet();
+
+    ASTree tree = new ASTree(new GMNode());
+    GMNode root = tree.getRoot();
+
     switch(pIastBinaryExpression.getOperator()) {
       case MULTIPLY:
+        root.addLabel(GMNodeLabel.MULTIPLY);
+        break;
       case DIVIDE:
+        root.addLabel(GMNodeLabel.DIVIDE);
+        break;
       case PLUS:
+        root.addLabel(GMNodeLabel.PLUS);
+        break;
       case MINUS:
-        labels.add(GMNodeLabel.ARITHMETIC);
+        root.addLabel(GMNodeLabel.MINUS);
         break;
       case EQUALS:
+        root.addLabel(GMNodeLabel.EQUALS);
+        break;
       case NOT_EQUALS:
+        root.addLabel(GMNodeLabel.NOT_EQUALS);
+        break;
       case LESS_THAN:
+        root.addLabel(GMNodeLabel.LESS_THAN);
+        break;
       case GREATER_THAN:
+        root.addLabel(GMNodeLabel.GREATER_THAN);
+        break;
       case LESS_EQUAL:
+        root.addLabel(GMNodeLabel.LESS_EQUAL);
+        break;
       case GREATER_EQUAL:
-        labels.add(GMNodeLabel.COMPARISON);
+        root.addLabel(GMNodeLabel.GREATER_EQUAL);
         break;
       case BINARY_AND:
+        root.addLabel(GMNodeLabel.BINARY_AND);
+        break;
       case BINARY_XOR:
+        root.addLabel(GMNodeLabel.BINARY_XOR);
+        break;
       case BINARY_OR:
+        root.addLabel(GMNodeLabel.BINARY_OR);
+        break;
       case SHIFT_LEFT:
+        root.addLabel(GMNodeLabel.SHIFT_LEFT);
+        break;
       case SHIFT_RIGHT:
-        labels.add(GMNodeLabel.BIT_OPERATION);
+        root.addLabel(GMNodeLabel.SHIFT_RIGHT);
         break;
       case MODULO:
-        labels.add(GMNodeLabel.MODULO);
+        root.addLabel(GMNodeLabel.MODULO);
         break;
     }
-    labels.addAll(pIastBinaryExpression.getOperand1().accept(this));
-    labels.addAll(pIastBinaryExpression.getOperand2().accept(this));
-    return Sets.immutableEnumSet(labels);
+    ASTree leftExpTree = pIastBinaryExpression.getOperand1().accept(this);
+    ASTree rightExpTree = pIastBinaryExpression.getOperand2().accept(this);
+    tree.addTree(leftExpTree);
+    tree.addTree(rightExpTree);
+
+    return tree;
   }
 
   @Override
   public ASTree visit(CCastExpression pIastCastExpression)
       throws CPATransferException {
-    ASTree labels = Sets.newHashSet();
-    labels.add(GMNodeLabel.CAST);
-    CTypeLabelVisitor typeLabelVisitor = new CTypeLabelVisitor(this.cfaEdge);
-    labels.addAll(pIastCastExpression.getCastType().accept(typeLabelVisitor));
-    labels.addAll(pIastCastExpression.getOperand().accept(this));
-    return Sets.immutableEnumSet(labels);
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.CAST_EXPRESSION));
+    ASTree castTypeTree = pIastCastExpression.getCastType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(castTypeTree, new GMNode(GMNodeLabel.CAST_TYPE));
+    ASTree operandTree = pIastCastExpression.getOperand().accept(this);
+    tree.addTree(operandTree, new GMNode(GMNodeLabel.OPERAND));
+    return tree;
   }
 
   @Override
   public ASTree visit(CCharLiteralExpression pIastCharLiteralExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.LITERAL);
+    return new ASTree(new GMNode(GMNodeLabel.CHAR_LITERAL));
   }
 
   @Override
   public ASTree visit(CFloatLiteralExpression pIastFloatLiteralExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.LITERAL);
+    return new ASTree(new GMNode(GMNodeLabel.FLOAT_LITERAL));
   }
 
   @Override
   public ASTree visit(CIntegerLiteralExpression pIastIntegerLiteralExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.LITERAL);
+    BigInteger value = pIastIntegerLiteralExpression.getValue();
+    if(value.compareTo(new BigInteger("256")) == -1)
+      return new ASTree(new GMNode(GMNodeLabel.INT_LITERAL_SMALL));
+    if(value.compareTo(new BigInteger("1024")) == -1)
+      return new ASTree(new GMNode(GMNodeLabel.INT_LITERAL_MEDIUM));
+    return new ASTree(new GMNode(GMNodeLabel.INT_LITERAL_LARGE));
   }
 
   @Override
   public ASTree visit(CStringLiteralExpression pIastStringLiteralExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.LITERAL);
+    return new ASTree(new GMNode(GMNodeLabel.STRING_LITERAL));
   }
 
   @Override
   public ASTree visit(CTypeIdExpression pIastTypeIdExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.TYPE_ID);
+    return new ASTree(new GMNode(GMNodeLabel.VARIABLE_ID));
   }
 
   @Override
   public ASTree visit(CUnaryExpression pIastUnaryExpression)
       throws CPATransferException {
-    ASTree labels = Sets.newHashSet();
+    ASTree tree = new ASTree(new GMNode());
+    GMNode root = tree.getRoot();
     switch(pIastUnaryExpression.getOperator()) {
       case MINUS:
-        labels.add(GMNodeLabel.ARITHMETIC);
+        root.addLabel(GMNodeLabel.MINUS);
         break;
       case AMPER:
-        labels.add(GMNodeLabel.ADDRESS);
+        root.addLabel(GMNodeLabel.AMPER);
         break;
       case TILDE:
-        labels.add(GMNodeLabel.BIT_OPERATION);
+        root.addLabel(GMNodeLabel.TILDE);
         break;
       case SIZEOF:
-        labels.add(GMNodeLabel.SIZEOF);
+        root.addLabel(GMNodeLabel.SIZEOF);
         break;
       case ALIGNOF:
-        throw new UnsupportedCCodeException("ALIGNOF is not supported", this.cfaEdge);
+        root.addLabel(GMNodeLabel.ALIGNOF);
     }
-    return Sets.union(labels, pIastUnaryExpression.getOperand().accept(this));
+    ASTree operandTree = pIastUnaryExpression.getOperand().accept(this);
+    tree.addTree(operandTree);
+    return tree;
   }
 
   @Override
   public ASTree visit(CImaginaryLiteralExpression PIastLiteralExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.COMPLEX_NUMBER);
+    return new ASTree(new GMNode(GMNodeLabel.COMPLEX_LITERAL));
   }
 
   @Override
   public ASTree visit(CAddressOfLabelExpression pAddressOfLabelExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.ADDRESS);
+    return new ASTree(new GMNode(GMNodeLabel.LABEL_ADDRESS));
   }
 
   @Override
   public ASTree visit(CArraySubscriptExpression pIastArraySubscriptExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.ARRAY_SUBSCRIPT);
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ARRAY_SUBSCRIPT_EXPRESSION));
+    ASTree arrayExp = pIastArraySubscriptExpression.getArrayExpression().accept(this);
+    tree.addTree(arrayExp, new GMNode(GMNodeLabel.ARRAY_EXPRESSION));
+    ASTree subscriptExp = pIastArraySubscriptExpression.getSubscriptExpression().accept(this);
+    tree.addTree(subscriptExp, new GMNode(GMNodeLabel.SUBSCRIPT_EXPRESSION));
+    return tree;
   }
 
   @Override
   public ASTree visit(CFieldReference pIastFieldReference)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.FIELD_REFERENCE);
+    ASTree tree = new ASTree(new GMNode());
+    GMNode root = tree.getRoot();
+    if(pIastFieldReference.isPointerDereference())
+      root.addLabel(GMNodeLabel.FIELD_POINTER_DEREF);
+    else
+      root.addLabel(GMNodeLabel.FIELD_REF);
+    ASTree ownerTree = pIastFieldReference.getFieldOwner().accept(this);
+    tree.addTree(ownerTree);
+    return tree;
   }
 
   @Override
   public ASTree visit(CIdExpression pIastIdExpression)
       throws CPATransferException {
     if(SPECIAL_FUNCTIONS.containsKey(pIastIdExpression.getName())) {
-      return Sets.immutableEnumSet(SPECIAL_FUNCTIONS.get(pIastIdExpression.getName()));
+      return new ASTree(new GMNode(SPECIAL_FUNCTIONS.get(pIastIdExpression.getName())));
     }
     for(String key : SPECIAL_FUNCTIONS.keySet()) {
       if(pIastIdExpression.getName().startsWith(key))
-        return Sets.immutableEnumSet(SPECIAL_FUNCTIONS.get(key));
+        return new ASTree(new GMNode(SPECIAL_FUNCTIONS.get(key)));
     }
-    return Sets.immutableEnumSet(GMNodeLabel.ID);
+    return new ASTree(new GMNode(GMNodeLabel.VARIABLE_ID));
   }
 
   @Override
   public ASTree visit(CPointerExpression pointerExpression)
       throws CPATransferException {
-    return Sets.union(Sets.immutableEnumSet(GMNodeLabel.PTR), pointerExpression.getOperand().accept(this));
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.POINTER_EXPRESSION));
+    ASTree operandTree = pointerExpression.getOperand().accept(this);
+    tree.addTree(operandTree);
+    return tree;
   }
 
   @Override
   public ASTree visit(CComplexCastExpression complexCastExpression)
       throws CPATransferException {
-    return Sets.immutableEnumSet(GMNodeLabel.COMPLEX_NUMBER);
+    throw new UnsupportedCCodeException("Unspecified expression", this.cfaEdge);
   }
 }
