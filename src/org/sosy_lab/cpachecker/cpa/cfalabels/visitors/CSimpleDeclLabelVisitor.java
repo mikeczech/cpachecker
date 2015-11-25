@@ -77,54 +77,56 @@ public class CSimpleDeclLabelVisitor
     this.cfaEdge = cfaEdge;
   }
 
-//  @Override
-//  public ASTree visit(CFunctionDeclaration pDecl)
-//      throws CPATransferException {
-//    ASTree labels = Sets.newHashSet(GMNodeLabel.FUNC);
-//    if(SPECIAL_FUNCTIONS.containsKey(pDecl.getName())) {
-//      labels.add(SPECIAL_FUNCTIONS.get(pDecl.getName()));
-//    }
-//    for(String key : SPECIAL_FUNCTIONS.keySet()) {
-//      if(pDecl.getName().startsWith(key))
-//        labels.add(SPECIAL_FUNCTIONS.get(key));
-//    }
-//    CTypeLabelVisitor returntypeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-//    labels.addAll(pDecl.getType().getReturnType().accept(returntypeVisitor));
-//    for(CParameterDeclaration param : pDecl.getParameters()) {
-//      CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-//      labels.addAll(param.getType().accept(typeVisitor));
-//    }
-//    return Sets.immutableEnumSet(labels);
-//  }
-//
-//  @Override
-//  public ASTree visit(CComplexTypeDeclaration pDecl)
-//      throws CPATransferException {
-//    ASTree labels = Sets.newHashSet(GMNodeLabel.COMPLEX_TYPE);
-//    CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-//    labels.addAll(pDecl.getType().accept(typeVisitor));
-//    return Sets.immutableEnumSet(labels);
-//  }
-//
-//  @Override
-//  public ASTree visit(CTypeDeclaration pDecl)
-//      throws CPATransferException {
-//    ASTree labels = Sets.newHashSet(GMNodeLabel.TYPE);
-//    CTypeLabelVisitor typeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-//    labels.addAll(pDecl.getType().accept(typeVisitor));
-//    return Sets.immutableEnumSet(labels);
-//  }
+  @Override
+  public ASTree visit(CFunctionDeclaration pDecl)
+      throws CPATransferException {
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNCTION_DECL));
+    GMNode root = tree.getRoot();
+    if(SPECIAL_FUNCTIONS.containsKey(pDecl.getName())) {
+      root.addLabel(SPECIAL_FUNCTIONS.get(pDecl.getName()));
+    }
+    for(String key : SPECIAL_FUNCTIONS.keySet()) {
+      if(pDecl.getName().startsWith(key))
+        root.addLabel(SPECIAL_FUNCTIONS.get(key));
+    }
+    ASTree returnTypeTree = pDecl.getType().getReturnType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(returnTypeTree, new GMNode(GMNodeLabel.RETURN_TYPE));
+
+    ASTree paramTypesTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
+    for(CParameterDeclaration param : pDecl.getParameters()) {
+      ASTree typeTree = param.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+      paramTypesTree.addTree(typeTree);
+    }
+    tree.addTree(paramTypesTree);
+    return tree;
+  }
+
+  @Override
+  public ASTree visit(CComplexTypeDeclaration pDecl)
+      throws CPATransferException {
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.COMPLEX_TYPE_DECL));
+    ASTree typeTree = pDecl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(typeTree);
+    return tree;
+  }
+
+  @Override
+  public ASTree visit(CTypeDeclaration pDecl)
+      throws CPATransferException {
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.TYPE_DECL));
+    ASTree typeTree = pDecl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(typeTree);
+    return tree;
+  }
 
   @Override
   public ASTree visit(CVariableDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree();
-    GMNode root = new GMNode(GMNodeLabel.VariableDecl);
-    tree.getTree().addVertex(root);
-    tree.setRoot(root);
-
-    CTypeLabelVisitor declTypeVisitor = new CTypeLabelVisitor(this.cfaEdge);
-    return Sets.union(Sets.immutableEnumSet(GMNodeLabel.VAR), pDecl.getType().accept(declTypeVisitor));
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.VARIABLE_DECL));
+    ASTree typeTree = pDecl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    tree.addTree(typeTree);
+    // Todo: add initializer
+    return tree;
   }
 
   @Override
