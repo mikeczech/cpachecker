@@ -370,12 +370,12 @@ class ASTConverter {
   }
 
   /**
-   * Takes a ASTNode, and tries to get Information of its Placement in the
+   * Takes a GMNode, and tries to get Information of its Placement in the
    * Source Code. If it doesnt't find such information, returns
    * an empty FileLocation Object.
    *
    *
-   * @param l A Code piece wrapped in an ASTNode
+   * @param l A Code piece wrapped in an GMNode
    * @return FileLocation with Placement Information of the Code Piece, or null
    *          if such Information could not be obtained.
    */

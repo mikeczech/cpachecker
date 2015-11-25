@@ -116,5 +116,6 @@
 	</lib>
 	<levels>
 		<level name="org.jgrapht:jgrapht-core:0.9.1" value="project"/>
+		<level name="org.javabits.jgrapht:jgrapht-ext:0.9.1" value="project"/>
 	</levels>
 </component>

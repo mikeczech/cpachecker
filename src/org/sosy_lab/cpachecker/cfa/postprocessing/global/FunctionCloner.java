@@ -497,7 +497,7 @@ class FunctionCloner implements CFAVisitor {
       }
     }
 
-    throw new AssertionError("unhandled ASTNode " + ast + " of " + ast.getClass());
+    throw new AssertionError("unhandled GMNode " + ast + " of " + ast.getClass());
   }
 
   @SuppressWarnings("unchecked")
