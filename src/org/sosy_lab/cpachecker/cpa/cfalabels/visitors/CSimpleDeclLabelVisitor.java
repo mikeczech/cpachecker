@@ -92,12 +92,15 @@ public class CSimpleDeclLabelVisitor
     ASTree returnTypeTree = pDecl.getType().getReturnType().accept(new CTypeLabelVisitor(this.cfaEdge));
     tree.addTree(returnTypeTree, new GMNode(GMNodeLabel.RETURN_TYPE));
 
-    ASTree paramTypesTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
-    for(CParameterDeclaration param : pDecl.getParameters()) {
-      ASTree typeTree = param.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
-      paramTypesTree.addTree(typeTree);
+    if(pDecl.getParameters().size() > 0) {
+      ASTree paramTypesTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
+      for (CParameterDeclaration param : pDecl.getParameters()) {
+        ASTree typeTree =
+            param.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+        paramTypesTree.addTree(typeTree);
+      }
+      tree.addTree(paramTypesTree);
     }
-    tree.addTree(paramTypesTree);
     return tree;
   }
 

@@ -149,12 +149,14 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
     if(pFunctionType.isVolatile())
       root.addLabel(GMNodeLabel.VOLATILE);
 
-    ASTree paramTypeTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
-    for(CType type : pFunctionType.getParameters()) {
-      ASTree typeTree = type.accept(new CTypeLabelVisitor(this.cfaEdge));
-      paramTypeTree.addTree(typeTree);
+    if(pFunctionType.getParameters().size() > 0) {
+      ASTree paramTypeTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
+      for (CType type : pFunctionType.getParameters()) {
+        ASTree typeTree = type.accept(new CTypeLabelVisitor(this.cfaEdge));
+        paramTypeTree.addTree(typeTree);
+      }
+      tree.addTree(paramTypeTree);
     }
-    tree.addTree(paramTypeTree);
     ASTree returnTypeTree = pFunctionType.getReturnType().accept(
         new CTypeLabelVisitor(this.cfaEdge));
     tree.addTree(returnTypeTree, new GMNode(GMNodeLabel.RETURN_TYPE));

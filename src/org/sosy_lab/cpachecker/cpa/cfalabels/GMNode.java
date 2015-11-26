@@ -47,4 +47,13 @@ public class GMNode {
     this.labels.add(pLabel);
   }
 
+  @Override
+  public String toString() {
+    StringBuilder labelList = new StringBuilder();
+    for (GMNodeLabel label : labels) {
+      labelList.append(label.name() + ",");
+    }
+    return new String(labelList.deleteCharAt(labelList.length() - 1));
+  }
+
 }

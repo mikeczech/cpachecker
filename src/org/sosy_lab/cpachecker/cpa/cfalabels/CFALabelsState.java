@@ -26,6 +26,9 @@ package org.sosy_lab.cpachecker.cpa.cfalabels;
 import java.io.Serializable;
 import java.io.StringWriter;
 
+import org.jgrapht.ext.EdgeNameProvider;
+import org.jgrapht.ext.IntegerNameProvider;
+import org.jgrapht.ext.VertexNameProvider;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
@@ -60,7 +63,20 @@ public class CFALabelsState
   @Override
   public String toString() {
     StringWriter strWriter = new StringWriter();
-    DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>();
+    DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
+        new IntegerNameProvider(),
+        new VertexNameProvider<GMNode>() {
+          @Override
+          public String getVertexName(GMNode o) {
+            return o.toString();
+          }
+        },
+        new EdgeNameProvider<GMEdge>() {
+          @Override
+          public String getEdgeName(GMEdge o) {
+            return o.toString();
+          }
+        });
     dotExp.export(strWriter, this.tree.asGraph());
     return strWriter.toString();
   }

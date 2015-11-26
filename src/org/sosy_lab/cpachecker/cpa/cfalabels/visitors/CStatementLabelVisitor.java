@@ -78,12 +78,14 @@ public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATran
     ASTree leftTree = pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(
         new CExpressionLabelVisitor(this.cfaEdge));
     tree.addTree(leftTree);
-    ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
-    for(CExpression paramExp : pIastFunctionCallAssignmentStatement.getRightHandSide().getParameterExpressions()) {
-      ASTree paramExpTree = paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
-      paramsTree.addTree(paramExpTree);
+    if(pIastFunctionCallAssignmentStatement.getRightHandSide().getParameterExpressions().size() > 0) {
+      ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
+      for(CExpression paramExp : pIastFunctionCallAssignmentStatement.getRightHandSide().getParameterExpressions()) {
+        ASTree paramExpTree = paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
+        paramsTree.addTree(paramExpTree);
+      }
+      tree.addTree(paramsTree);
     }
-    tree.addTree(paramsTree);
     return tree;
   }
 
@@ -92,12 +94,16 @@ public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATran
       throws CPATransferException {
     ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL));
     // add labels for arguments as well
-    ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
-    for(CExpression paramExp : pIastFunctionCallStatement.getFunctionCallExpression().getParameterExpressions()) {
-      ASTree paramExpTree = paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
-      paramsTree.addTree(paramExpTree);
+    if(pIastFunctionCallStatement.getFunctionCallExpression().getParameterExpressions().size() > 0) {
+      ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
+      for (CExpression paramExp : pIastFunctionCallStatement
+          .getFunctionCallExpression().getParameterExpressions()) {
+        ASTree paramExpTree =
+            paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
+        paramsTree.addTree(paramExpTree);
+      }
+      tree.addTree(paramsTree);
     }
-    tree.addTree(paramsTree);
     return tree;
   }
 }
