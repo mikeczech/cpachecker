@@ -60,6 +60,10 @@ public class CFALabelsState
     this.tree = pTree;
   }
 
+  public boolean isInit() {
+    return this.source == -1 || this.target == -1;
+  }
+
   @Override
   public String toString() {
     StringWriter strWriter = new StringWriter();
@@ -78,7 +82,7 @@ public class CFALabelsState
           }
         });
     dotExp.export(strWriter, this.tree.asGraph());
-    return strWriter.toString();
+    return "[" + this.source +  "," + this.target + "] "+ strWriter.toString();
   }
 
   @Override
@@ -105,4 +109,5 @@ public class CFALabelsState
   public boolean shouldBeHighlighted() {
     return false;
   }
+
 }

@@ -82,9 +82,6 @@ public class CSimpleDeclLabelVisitor
       throws CPATransferException {
     ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNCTION_DECL));
     GMNode root = tree.getRoot();
-    if(SPECIAL_FUNCTIONS.containsKey(pDecl.getName())) {
-      root.addLabel(SPECIAL_FUNCTIONS.get(pDecl.getName()));
-    }
     for(String key : SPECIAL_FUNCTIONS.keySet()) {
       if(pDecl.getName().startsWith(key))
         root.addLabel(SPECIAL_FUNCTIONS.get(key));

@@ -33,6 +33,10 @@ import com.google.common.collect.ImmutableSet;
 public enum GMNodeLabel implements Serializable {
 
   // New
+  LOOP,
+  BRANCH,
+  ARGUMENTS,
+  CONDITION,
   VARIABLE_DECL,
   TYPE_DECL,
   COMPLEX_TYPE_DECL,

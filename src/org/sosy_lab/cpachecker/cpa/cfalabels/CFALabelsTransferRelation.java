@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 
 import org.sosy_lab.common.log.LogManager;
 import org.sosy_lab.cpachecker.cfa.ast.c.CDeclaration;
@@ -36,6 +37,7 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CParameterDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CStatement;
 import org.sosy_lab.cpachecker.cfa.model.BlankEdge;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
+import org.sosy_lab.cpachecker.cfa.model.CFANode;
 import org.sosy_lab.cpachecker.cfa.model.c.CAssumeEdge;
 import org.sosy_lab.cpachecker.cfa.model.c.CDeclarationEdge;
 import org.sosy_lab.cpachecker.cfa.model.c.CFunctionCallEdge;
@@ -83,6 +85,13 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
     SPECIAL_FUNCTIONS = builder.build();
   }
 
+  public static GMNodeLabel extractControlLabel(CFAEdge pCFAEdge) {
+    if(pCFAEdge.getPredecessor().isLoopStart()) {
+      return GMNodeLabel.LOOP;
+    }
+    return GMNodeLabel.BRANCH;
+  }
+
   @Override
   public Collection<? extends AbstractState> strengthen(AbstractState pState, List<AbstractState> pOtherStates,
       CFAEdge pCfaEdge, Precision pPrecision) throws CPATransferException, InterruptedException {
@@ -93,9 +102,12 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
       CExpression expression, boolean truthAssumption)
       throws CPATransferException {
-//    Set<GMNodeLabel> labels = Sets.newHashSet(truthAssumption ? GMNodeLabel.ASSUME_TRUE : GMNodeLabel.ASSUME_FALSE);
-//    CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
-//    return state.addEdgeLabel(cfaEdge, Sets.union(labels, expression.accept(expLabelVisitor)));
+    if(truthAssumption) {
+      ASTree tree = new ASTree(new GMNode(extractControlLabel(cfaEdge)));
+      ASTree assumeExpTree = expression.accept(new CExpressionLabelVisitor(cfaEdge));
+      tree.addTree(assumeExpTree);
+      return new CFALabelsState(cfaEdge, tree);
+    }
     return state;
   }
 
@@ -103,28 +115,27 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
       List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
-//    Set<GMNodeLabel> labels = Sets.newHashSet(GMNodeLabel.FUNC_CALL);
-//    if(SPECIAL_FUNCTIONS.containsKey(calledFunctionName)) {
-//      labels.add(SPECIAL_FUNCTIONS.get(calledFunctionName));
-//    }
-//    for(String key : SPECIAL_FUNCTIONS.keySet()) {
-//      if(calledFunctionName.startsWith(key))
-//        labels.add(SPECIAL_FUNCTIONS.get(key));
-//    }
-//    for(CExpression arg : arguments) {
-//      CExpressionLabelVisitor expLabelVisitor = new CExpressionLabelVisitor(cfaEdge);
-//      labels.addAll(arg.accept(expLabelVisitor));
-//    }
-//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(labels));
-    return state;
+    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL));
+    GMNode root = tree.getRoot();
+    for(String key : SPECIAL_FUNCTIONS.keySet()) {
+      if(calledFunctionName.startsWith(key))
+        root.addLabel(SPECIAL_FUNCTIONS.get(key));
+    }
+    if(arguments.size() > 0) {
+      ASTree argsTree = new ASTree(new GMNode(GMNodeLabel.ARGUMENTS));
+      for (CExpression arg : arguments) {
+        argsTree.addTree(arg.accept(new CExpressionLabelVisitor(cfaEdge)));
+      }
+      tree.addTree(argsTree);
+    }
+    return new CFALabelsState(cfaEdge, tree);
   }
 
   @Override
   protected CFALabelsState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
       CFunctionSummaryEdge fnkCall, CFunctionCall summaryExpr,
       String callerFunctionName) throws CPATransferException {
-//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(GMNodeLabel.FUNC_RETURN));
-    return state;
+    return new CFALabelsState(cfaEdge, new ASTree(new GMNode(GMNodeLabel.RETURN)));
   }
 
   @Override
@@ -142,23 +153,18 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   @Override
   protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
       CStatement statement) throws CPATransferException {
-//    CStatementLabelVisitor statementLabelVisitor = new CStatementLabelVisitor(cfaEdge);
-//    Set<GMNodeLabel> labels = Sets.newHashSet();
-//    return state.addEdgeLabel(cfaEdge, Sets.union(labels,
-//        statement.accept(statementLabelVisitor)));
-    return state;
+    ASTree tree = statement.accept(new CStatementLabelVisitor(cfaEdge));
+    return new CFALabelsState(cfaEdge, tree);
   }
 
   @Override
   protected CFALabelsState handleReturnStatementEdge(
       CReturnStatementEdge cfaEdge) throws CPATransferException {
-//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(GMNodeLabel.RETURN));
-    return state;
+    return new CFALabelsState(cfaEdge, new ASTree(new GMNode(GMNodeLabel.RETURN)));
   }
 
   @Override
   protected CFALabelsState handleBlankEdge(BlankEdge cfaEdge) {
-//    return state.addEdgeLabel(cfaEdge, Sets.immutableEnumSet(GMNodeLabel.BLANK));
     return state;
   }
 
