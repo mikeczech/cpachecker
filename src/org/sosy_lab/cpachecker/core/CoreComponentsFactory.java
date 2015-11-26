@@ -46,6 +46,7 @@ import org.sosy_lab.cpachecker.core.algorithm.RestartAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.RestartAlgorithmWithARGReplay;
 import org.sosy_lab.cpachecker.core.algorithm.RestartWithConditionsAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.bmc.BMCAlgorithm;
+import org.sosy_lab.cpachecker.core.algorithm.gmgen.GMGenerator;
 import org.sosy_lab.cpachecker.core.algorithm.impact.ImpactAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.pcc.AlgorithmWithPropertyCheck;
 import org.sosy_lab.cpachecker.core.algorithm.pcc.PartialARGsCombiner;
@@ -60,6 +61,7 @@ import org.sosy_lab.cpachecker.core.reachedset.HistoryForwardingReachedSet;
 import org.sosy_lab.cpachecker.core.reachedset.ReachedSet;
 import org.sosy_lab.cpachecker.core.reachedset.ReachedSetFactory;
 import org.sosy_lab.cpachecker.cpa.PropertyChecker.PropertyCheckerCPA;
+import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsCPA;
 import org.sosy_lab.cpachecker.cpa.location.LocationCPA;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
@@ -121,6 +123,10 @@ public class CoreComponentsFactory {
   @Option(secure=true, name="algorithm.proofCheck",
       description="use a proof check algorithm to validate a previously generated proof")
   private boolean useProofCheckAlgorithm = false;
+
+  @Option(secure=true, name="algorithm.gmgen",
+      description="activate generation of graph model from reached set")
+  private boolean useGMGenAlgorithm = false;
 
   @Option(secure=true, name="algorithm.propertyCheck",
       description = "do analysis and then check "
@@ -229,6 +235,15 @@ public class CoreComponentsFactory {
         }
         algorithm =
             new AlgorithmWithPropertyCheck(algorithm, logger, (PropertyCheckerCPA) cpa);
+      }
+
+      if (useGMGenAlgorithm) {
+//        if(!(cpa instanceof CFALabelsCPA)) {
+//          throw new InvalidConfigurationException(
+//              "Graph Model Generator needs GMCPA as Top CPA");
+//        }
+        algorithm =
+            new GMGenerator(algorithm, logger, cpa);
       }
 
       if (useResultCheckAlgorithm) {
