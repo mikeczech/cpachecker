@@ -31,13 +31,21 @@ import java.util.List;
  */
 public class GMNode {
 
+  private static int idCounter = 0;
+
+  private final int id;
+
   private List<GMNodeLabel> labels = new ArrayList<>();
 
   public GMNode(GMNodeLabel pLabel) {
+    this();
     this.labels.add(pLabel);
   }
 
-  public GMNode() {}
+  public GMNode() {
+    id = idCounter;
+    idCounter++;
+  }
 
   public List<GMNodeLabel> getLabels() {
     return this.labels;
@@ -56,4 +64,26 @@ public class GMNode {
     return new String(labelList.deleteCharAt(labelList.length() - 1));
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    GMNode gmNode = (GMNode)o;
+
+    if (id != gmNode.id) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return id;
+  }
 }

@@ -29,5 +29,7 @@ public enum GMEdgeLabel implements Serializable {
   SYNTACTIC,
   DATA_DEPENDENCE,
   CONTROL_DEPENDENCE,
-  CONTROL_FLOW
+  CONTROL_FLOW,
+  ASSUME_TRUE,
+  ASSUME_FALSE
 }

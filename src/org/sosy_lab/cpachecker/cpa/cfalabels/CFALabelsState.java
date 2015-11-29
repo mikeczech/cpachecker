@@ -25,6 +25,8 @@ package org.sosy_lab.cpachecker.cpa.cfalabels;
 
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.IntegerNameProvider;
@@ -40,28 +42,105 @@ import org.jgrapht.ext.DOTExporter;
 public class CFALabelsState
     implements Serializable, AbstractState, Graphable {
 
-  private int source;
+  public class EdgeInfo {
+    private int source;
+    private int target;
+    private Set<GMEdgeLabel> labels = new HashSet<>();
 
-  private int target;
+    public EdgeInfo(int pSource, int pTarget) {
+      source = pSource;
+      target = pTarget;
+    }
+
+    public Set<GMEdgeLabel> getLabels() {
+      return labels;
+    }
+
+    public void addLabel(GMEdgeLabel pLabel) {
+      this.labels.add(pLabel);
+    }
+
+    public int getTarget() {
+      return target;
+    }
+
+    public int getSource() {
+      return source;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      EdgeInfo edgeInfo = (EdgeInfo)o;
+
+      if (source != edgeInfo.source) {
+        return false;
+      }
+      if (target != edgeInfo.target) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = source;
+      result = 31 * result + target;
+      return result;
+    }
+  }
 
   private ASTree tree;
+
+  private Set<EdgeInfo> edgeInfoSet= new HashSet<>();
+
+  private EdgeInfo lastAddedEdgeInfo = null;
 
   public final static CFALabelsState TOP = new CFALabelsState();
 
   private CFALabelsState() {
-    this.source = -1;
-    this.target = -1;
     this.tree = new ASTree();
   }
 
   public CFALabelsState(CFAEdge pEdge, ASTree pTree) {
-    this.source = pEdge.getPredecessor().getNodeNumber();
-    this.target = pEdge.getSuccessor().getNodeNumber();
+    EdgeInfo edgeInfo = new EdgeInfo(
+        pEdge.getPredecessor().getNodeNumber(),
+        pEdge.getSuccessor().getNodeNumber());
+    this.lastAddedEdgeInfo = edgeInfo;
+    this.edgeInfoSet.add(edgeInfo);
     this.tree = pTree;
   }
 
+  public void addEdge(CFAEdge pCFAEdge) {
+    EdgeInfo edgeInfo = new EdgeInfo(
+        pCFAEdge.getPredecessor().getNodeNumber(),
+        pCFAEdge.getSuccessor().getNodeNumber());
+    this.edgeInfoSet.add(edgeInfo);
+    this.lastAddedEdgeInfo = edgeInfo;
+  }
+
+  public EdgeInfo getLastAddedEdgeInfo() {
+    return lastAddedEdgeInfo;
+  }
+
+
+  public Set<EdgeInfo> getEdgeInfoSet() {
+    return edgeInfoSet;
+  }
+
+  public ASTree getTree() {
+    return tree;
+  }
+
   public boolean isInit() {
-    return this.source == -1 || this.target == -1;
+    return this.edgeInfoSet.isEmpty();
   }
 
   @Override
@@ -82,22 +161,32 @@ public class CFALabelsState
           }
         });
     dotExp.export(strWriter, this.tree.asGraph());
-    return "[" + this.source +  "," + this.target + "] "+ strWriter.toString();
+    return strWriter.toString();
   }
 
+
   @Override
-  public boolean equals(Object pObj) {
-    if (!(pObj instanceof CFALabelsState))
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
       return false;
-    return ((CFALabelsState) pObj).source == this.source
-        && ((CFALabelsState) pObj).target == this.target;
+    }
+
+    CFALabelsState that = (CFALabelsState)o;
+
+    if (edgeInfoSet != null ? !edgeInfoSet.equals(that.edgeInfoSet)
+        : that.edgeInfoSet != null) {
+      return false;
+    }
+
+    return true;
   }
 
   @Override
   public int hashCode() {
-    int result = source;
-    result = 31 * result + target;
-    return result;
+    return edgeInfoSet != null ? edgeInfoSet.hashCode() : 0;
   }
 
   @Override

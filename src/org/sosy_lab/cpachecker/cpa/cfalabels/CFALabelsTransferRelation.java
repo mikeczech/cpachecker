@@ -24,6 +24,7 @@
 package org.sosy_lab.cpachecker.cpa.cfalabels;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +50,7 @@ import org.sosy_lab.cpachecker.core.defaults.ForwardingTransferRelation;
 import org.sosy_lab.cpachecker.core.defaults.SingletonPrecision;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Precision;
+import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsState.EdgeInfo;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CExpressionLabelVisitor;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CSimpleDeclLabelVisitor;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CStatementLabelVisitor;
@@ -62,7 +64,9 @@ import com.google.common.collect.Sets;
 
 public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALabelsState, CFALabelsState, SingletonPrecision> {
 
-  LogManager logger;
+  private LogManager logger;
+
+  private Map<Integer, CFALabelsState> controlLocStateCache = new HashMap<>();
 
   public CFALabelsTransferRelation(LogManager pLogger) {
     logger = pLogger;
@@ -102,12 +106,23 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
       CExpression expression, boolean truthAssumption)
       throws CPATransferException {
-    if(truthAssumption) {
+    int predecessor = cfaEdge.getPredecessor().getNodeNumber();
+    CFALabelsState state;
+    if(!controlLocStateCache.containsKey(predecessor)) {
       ASTree tree = new ASTree(new GMNode(extractControlLabel(cfaEdge)));
       ASTree assumeExpTree = expression.accept(new CExpressionLabelVisitor(cfaEdge));
       tree.addTree(assumeExpTree);
-      return new CFALabelsState(cfaEdge, tree);
+      state = new CFALabelsState(cfaEdge, tree);
+      controlLocStateCache.put(predecessor, state);
+    } else {
+      state = controlLocStateCache.get(predecessor);
+      state.addEdge(cfaEdge);
     }
+    EdgeInfo edgeInfo = state.getLastAddedEdgeInfo();
+    if(truthAssumption)
+      edgeInfo.addLabel(GMEdgeLabel.ASSUME_TRUE);
+    else
+      edgeInfo.addLabel(GMEdgeLabel.ASSUME_FALSE);
     return state;
   }
 
@@ -165,7 +180,8 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
 
   @Override
   protected CFALabelsState handleBlankEdge(BlankEdge cfaEdge) {
-    return state;
+    ASTree blankTree = new ASTree(new GMNode(GMNodeLabel.BLANK));
+    return new CFALabelsState(cfaEdge, blankTree);
   }
 
   @Override
