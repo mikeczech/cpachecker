@@ -26,6 +26,7 @@ package org.sosy_lab.cpachecker.core.algorithm.gmgen;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -62,6 +63,7 @@ import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
 import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.DefinitionPoint;
+import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.ProgramDefinitionPoint;
 import org.sosy_lab.cpachecker.cpa.seplogic.interfaces.Handle;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
@@ -116,7 +118,7 @@ public class GMGeneratorAlgorithm implements Algorithm {
     pGMGraph.removeAllVertices(nodesToRemove);
   }
 
-  private DirectedGraph<GMNode, GMEdge> generateCFGFromStates(Set<CFALabelsState> states) {
+  private DirectedGraph<GMNode, GMEdge> generateCFGFromStates(Collection<CFALabelsState> states) {
     DirectedGraph<GMNode, GMEdge> result = new DefaultDirectedGraph<>(GMEdge.class);
     Map<Integer, List<GMNode>> stateTable = new HashMap<>();
     for(CFALabelsState s : states) {
@@ -151,14 +153,33 @@ public class GMGeneratorAlgorithm implements Algorithm {
     return result;
   }
 
-  private void addDataDependenceEdges(Set<CFALabelsState> states,
+  private void addDataDependenceEdges(Table<Integer, Integer, CFALabelsState> states,
       DirectedGraph<GMNode, GMEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
     Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
-    for(CFALabelsState node : states) {
-      GMNode targetRoot = node.getTree().getRoot();
-      for(EdgeInfo e : node.getEdgeInfoSet()) {
-        int source = e.getSource();
+    for(CFALabelsState s : states.values()) {
+      GMNode targetRoot = s.getTree().getRoot();
+      for(EdgeInfo e : s.getEdgeInfoSet()) {
+        ReachingDefState reachDefState = reachDef.get(e.getSource());
+        for(String var : s.getVariables()) {
 
+          Set<DefinitionPoint> local = reachDefState.getLocalReachingDefinitions().get(var);
+          Set<DefinitionPoint> global = reachDefState.getGlobalReachingDefinitions().get(var);
+          List<DefinitionPoint> defPoints = new ArrayList<>();
+          if(local != null)
+            defPoints.addAll(local);
+          if(global != null)
+            defPoints.addAll(global);
+
+          // Create for each program definition point a data dependence edge
+          for(DefinitionPoint p : defPoints) {
+            if(p instanceof ProgramDefinitionPoint) {
+              ProgramDefinitionPoint pdp = (ProgramDefinitionPoint)p;
+              GMNode sourceRoot = states.get(pdp.getDefinitionEntryLocation().getNodeNumber(),
+                  pdp.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
+              pGM.addEdge(sourceRoot, targetRoot, new GMEdge(sourceRoot, targetRoot, GMEdgeLabel.DATA_DEPENDENCE));
+            }
+          }
+        }
       }
     }
   }
@@ -204,7 +225,7 @@ public class GMGeneratorAlgorithm implements Algorithm {
     AlgorithmStatus result = algorithm.run(reachedSet);
     logger.log(Level.INFO, "GM generator algorithm started.");
 
-    Set<CFALabelsState> astLocStates = new HashSet<>();
+    Table<Integer, Integer, CFALabelsState> astLocStates = HashBasedTable.create();
     Map<Integer, Set<AbstractState>> statesPerNode = new HashMap<>();
     for(AbstractState absState : reachedSet.asCollection()) {
       ARGState state = (ARGState)absState;
@@ -212,7 +233,8 @@ public class GMGeneratorAlgorithm implements Algorithm {
       for(AbstractState child : compState.getWrappedStates()) {
         if(child instanceof CFALabelsState) {
           CFALabelsState gmState = (CFALabelsState)child;
-          astLocStates.add(gmState);
+          for(EdgeInfo e : gmState.getEdgeInfoSet())
+            astLocStates.put(e.getSource(), e.getTarget(), gmState);
         }
         if(child instanceof LocationState) {
           LocationState locState = (LocationState)child;
@@ -223,8 +245,8 @@ public class GMGeneratorAlgorithm implements Algorithm {
         }
       }
     }
-    DirectedGraph<GMNode, GMEdge> gm = generateCFGFromStates(astLocStates);
-    addDataDependenceEdges(gm, statesPerNode);
+    DirectedGraph<GMNode, GMEdge> gm = generateCFGFromStates(astLocStates.values());
+    addDataDependenceEdges(astLocStates, gm, statesPerNode);
     pruneBlankNodes(gm);
 
     DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
