@@ -151,6 +151,18 @@ public class GMGeneratorAlgorithm implements Algorithm {
     return result;
   }
 
+  private void addDataDependenceEdges(Set<CFALabelsState> states,
+      DirectedGraph<GMNode, GMEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
+    Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
+    for(CFALabelsState node : states) {
+      GMNode targetRoot = node.getTree().getRoot();
+      for(EdgeInfo e : node.getEdgeInfoSet()) {
+        int source = e.getSource();
+
+      }
+    }
+  }
+
   private Map<Integer, ReachingDefState> collectReachDef(Map<Integer, Set<AbstractState>> statesPerNode) {
     Map<Integer, ReachingDefState> result = new HashMap<>();
     for(Integer nodeNum : statesPerNode.keySet()) {
@@ -211,10 +223,9 @@ public class GMGeneratorAlgorithm implements Algorithm {
         }
       }
     }
-    collectReachDef(statesPerNode);
-
-    DirectedGraph<GMNode, GMEdge> cfg = generateCFGFromStates(astLocStates);
-    pruneBlankNodes(cfg);
+    DirectedGraph<GMNode, GMEdge> gm = generateCFGFromStates(astLocStates);
+    addDataDependenceEdges(gm, statesPerNode);
+    pruneBlankNodes(gm);
 
     DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
         new IntegerNameProvider<GMNode>(),
@@ -231,7 +242,7 @@ public class GMGeneratorAlgorithm implements Algorithm {
           }
         });
     try {
-      dotExp.export(new FileWriter(gmOutputFile.getPath()), cfg);
+      dotExp.export(new FileWriter(gmOutputFile.getPath()), gm);
     } catch (IOException e) {
       logger.logException(Level.ALL, e, "Cannot write DOT");
     }

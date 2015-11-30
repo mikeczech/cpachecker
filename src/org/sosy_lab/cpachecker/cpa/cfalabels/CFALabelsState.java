@@ -99,6 +99,8 @@ public class CFALabelsState
 
   private ASTree tree;
 
+  private Set<String> variables = new HashSet<>();
+
   private Set<EdgeInfo> edgeInfoSet= new HashSet<>();
 
   private EdgeInfo lastAddedEdgeInfo = null;
@@ -108,14 +110,22 @@ public class CFALabelsState
   private CFALabelsState() {
     this.tree = new ASTree();
   }
-
   public CFALabelsState(CFAEdge pEdge, ASTree pTree) {
+    this(pEdge, pTree, new HashSet<String>());
+  }
+
+  public CFALabelsState(CFAEdge pEdge, ASTree pTree, Set<String> pVars) {
     EdgeInfo edgeInfo = new EdgeInfo(
         pEdge.getPredecessor().getNodeNumber(),
         pEdge.getSuccessor().getNodeNumber());
     this.lastAddedEdgeInfo = edgeInfo;
     this.edgeInfoSet.add(edgeInfo);
     this.tree = pTree;
+    this.variables.addAll(pVars);
+  }
+
+  public Set<String> getVariables() {
+    return variables;
   }
 
   public void addEdge(CFAEdge pCFAEdge) {

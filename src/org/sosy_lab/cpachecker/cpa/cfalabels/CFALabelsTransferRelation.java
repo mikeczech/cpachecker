@@ -25,6 +25,7 @@ package org.sosy_lab.cpachecker.cpa.cfalabels;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,6 +55,8 @@ import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsState.EdgeInfo;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CExpressionLabelVisitor;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CSimpleDeclLabelVisitor;
 import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CStatementLabelVisitor;
+import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CStatementVariablesCollectingVisitor;
+import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CVariablesCollectingVisitor;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCodeException;
 
@@ -112,7 +115,8 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
       ASTree tree = new ASTree(new GMNode(extractControlLabel(cfaEdge)));
       ASTree assumeExpTree = expression.accept(new CExpressionLabelVisitor(cfaEdge));
       tree.addTree(assumeExpTree);
-      state = new CFALabelsState(cfaEdge, tree);
+      state = new CFALabelsState(cfaEdge, tree, expression.accept(
+          new CVariablesCollectingVisitor(cfaEdge.getPredecessor())));
       controlLocStateCache.put(predecessor, state);
     } else {
       state = controlLocStateCache.get(predecessor);
@@ -143,6 +147,9 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
       }
       tree.addTree(argsTree);
     }
+    Set<String> vars = new HashSet<>();
+    for(CExpression exp : arguments)
+      vars.addAll(exp.accept(new CVariablesCollectingVisitor(cfaEdge.getPredecessor())));
     return new CFALabelsState(cfaEdge, tree);
   }
 
@@ -169,7 +176,8 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
       CStatement statement) throws CPATransferException {
     ASTree tree = statement.accept(new CStatementLabelVisitor(cfaEdge));
-    return new CFALabelsState(cfaEdge, tree);
+    return new CFALabelsState(cfaEdge, tree,
+        statement.accept(new CStatementVariablesCollectingVisitor(cfaEdge.getPredecessor())));
   }
 
   @Override
