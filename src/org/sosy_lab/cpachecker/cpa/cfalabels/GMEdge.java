@@ -51,6 +51,10 @@ public class GMEdge extends DefaultEdge {
     this.gmEdgeLabels.add(pEdgeLabel);
   }
 
+  public List<GMEdgeLabel> getGmEdgeLabels() {
+    return gmEdgeLabels;
+  }
+
   public GMNode getV1() {
     return v1;
   }

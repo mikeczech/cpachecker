@@ -47,6 +47,14 @@ public class GMNode {
     idCounter++;
   }
 
+  public boolean isBlank() {
+    if(labels.contains(GMNodeLabel.BLANK)) {
+      assert labels.size() == 1;
+      return true;
+    }
+    return false;
+  }
+
   public List<GMNodeLabel> getLabels() {
     return this.labels;
   }

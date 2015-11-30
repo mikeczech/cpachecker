@@ -190,7 +190,8 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
   @Override
   public ASTree visit(CSimpleType pSimpleType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.SIMPLE_TYPE));
+
+    ASTree tree = new ASTree(new GMNode());
     GMNode root = tree.getRoot();
 
     if(pSimpleType.isConst())
@@ -198,51 +199,48 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
     if(pSimpleType.isVolatile())
       root.addLabel(GMNodeLabel.VOLATILE);
 
-    ASTree typeTree = new ASTree(new GMNode());
-    GMNode typeTreeRoot = typeTree.getRoot();
     if(pSimpleType.isUnsigned())
-      typeTreeRoot.addLabel(GMNodeLabel.UNSIGNED);
+      root.addLabel(GMNodeLabel.UNSIGNED);
     switch(pSimpleType.getType()) {
       case BOOL:
-        typeTreeRoot.addLabel(GMNodeLabel.BOOL);
+        root.addLabel(GMNodeLabel.BOOL);
         break;
       case CHAR:
-        typeTreeRoot.addLabel(GMNodeLabel.CHAR);
+        root.addLabel(GMNodeLabel.CHAR);
         break;
       case INT:
-        typeTreeRoot.addLabel(GMNodeLabel.INT);
+        root.addLabel(GMNodeLabel.INT);
         break;
       case FLOAT:
-        typeTreeRoot.addLabel(GMNodeLabel.FLOAT);
+        root.addLabel(GMNodeLabel.FLOAT);
         break;
       case DOUBLE:
-        typeTreeRoot.addLabel(GMNodeLabel.DOUBLE);
+        root.addLabel(GMNodeLabel.DOUBLE);
         break;
       default:
         if(pSimpleType.isLong()) {
-          typeTreeRoot.addLabel(GMNodeLabel.LONG);
+          root.addLabel(GMNodeLabel.LONG);
           break;
         }
         if(pSimpleType.isLongLong()) {
-          typeTreeRoot.addLabel(GMNodeLabel.LONGLONG);
+          root.addLabel(GMNodeLabel.LONGLONG);
           break;
         }
         if(pSimpleType.isShort()) {
-          typeTreeRoot.addLabel(GMNodeLabel.SHORT);
+          root.addLabel(GMNodeLabel.SHORT);
           break;
         }
         if(pSimpleType.isVolatile()) {
-          typeTreeRoot.addLabel(GMNodeLabel.VOLATILE);
+          root.addLabel(GMNodeLabel.VOLATILE);
           break;
         }
         // Can be used as standalone type?
         if(pSimpleType.isUnsigned()) {
-          typeTreeRoot.addLabel(GMNodeLabel.UNSIGNED);
+          root.addLabel(GMNodeLabel.UNSIGNED);
           break;
         }
         throw new UnsupportedCCodeException("Unspecified declaration type: CSimpleType", this.cfaEdge);
     }
-    tree.addTree(typeTree);
     return tree;
   }
 

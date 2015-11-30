@@ -87,6 +87,32 @@ public class GMGeneratorAlgorithm implements Algorithm {
     algorithm = pAlgorithm;
   }
 
+  private void pruneBlankNodes(DirectedGraph<GMNode, GMEdge> pGMGraph) {
+    Set<GMEdge> edgesToRemove = new HashSet<>();
+    Set<GMNode> nodesToRemove = new HashSet<>();
+    for(GMNode node : pGMGraph.vertexSet()) {
+      if(node.isBlank()) {
+        assert pGMGraph.outDegreeOf(node) == 1;
+        for(GMEdge targetEdge : pGMGraph.outgoingEdgesOf(node)) {
+          GMNode target = targetEdge.getV2();
+          edgesToRemove.add(targetEdge);
+          for(GMEdge sourceEdge : pGMGraph.incomingEdgesOf(node)) {
+            GMNode source = sourceEdge.getV1();
+            Set<GMEdgeLabel> labels = new HashSet<>();
+            labels.addAll(targetEdge.getGmEdgeLabels());
+            labels.addAll(sourceEdge.getGmEdgeLabels());
+            pGMGraph.addEdge(source, target,
+                new GMEdge(source, target, new ArrayList<>(labels)));
+            edgesToRemove.add(sourceEdge);
+          }
+        }
+        nodesToRemove.add(node);
+      }
+    }
+    pGMGraph.removeAllEdges(edgesToRemove);
+    pGMGraph.removeAllVertices(nodesToRemove);
+  }
+
   private DirectedGraph<GMNode, GMEdge> generateCFGFromStates(Set<CFALabelsState> states) {
     DirectedGraph<GMNode, GMEdge> result = new DefaultDirectedGraph<>(GMEdge.class);
     Map<Integer, List<GMNode>> stateTable = new HashMap<>();
@@ -141,6 +167,7 @@ public class GMGeneratorAlgorithm implements Algorithm {
     }
 
     DirectedGraph<GMNode, GMEdge> cfg = generateCFGFromStates(states);
+    pruneBlankNodes(cfg);
 
     DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
         new IntegerNameProvider<GMNode>(),
