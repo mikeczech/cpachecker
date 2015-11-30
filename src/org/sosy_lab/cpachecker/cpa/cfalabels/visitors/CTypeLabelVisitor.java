@@ -135,7 +135,7 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
 
   @Override
   public ASTree visit(CEnumType pEnumType) throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type: CEnumType", this.cfaEdge);
+    return new ASTree(new GMNode(GMNodeLabel.ENUM_TYPE));
   }
 
   @Override

@@ -95,6 +95,7 @@ public enum GMNodeLabel implements Serializable {
   PARAMS,
   FUNC_CALL,
   GLOBAL,
+  ENUM_TYPE,
 
 
 
