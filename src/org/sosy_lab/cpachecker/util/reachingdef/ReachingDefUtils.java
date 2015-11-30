@@ -182,11 +182,11 @@ TODO delete */
 
     @Override
     public String visit(CFieldReference pIastFieldReference) throws UnsupportedCCodeException {
-      if (pIastFieldReference.isPointerDereference()) {
-        throw new UnsupportedCCodeException(
-            "Does not support assignment to dereferenced variable due to missing aliasing support", edgeForExpression,
-            pIastFieldReference);
-      }
+//      if (pIastFieldReference.isPointerDereference()) {
+//        throw new UnsupportedCCodeException(
+//            "Does not support assignment to dereferenced variable due to missing aliasing support", edgeForExpression,
+//            pIastFieldReference);
+//      }
       warning = "Analysis may be unsound in case of aliasing.";
       return pIastFieldReference.getFieldOwner().accept(this);
     }
@@ -203,9 +203,10 @@ TODO delete */
 
     @Override
     public String visit(CPointerExpression pIastUnaryExpression) throws UnsupportedCCodeException {
-        throw new UnsupportedCCodeException(
-            "Does not support assignment to dereferenced variable due to missing aliasing support", edgeForExpression,
-            pIastUnaryExpression);
+//        throw new UnsupportedCCodeException(
+//            "Does not support assignment to dereferenced variable due to missing aliasing support", edgeForExpression,
+//            pIastUnaryExpression);
+      return pIastUnaryExpression.getOperand().accept(this); // newly added
     }
   }
 
