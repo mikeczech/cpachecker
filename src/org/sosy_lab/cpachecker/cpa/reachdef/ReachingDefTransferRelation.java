@@ -238,9 +238,9 @@ public class ReachingDefTransferRelation implements TransferRelation {
       // check if initial value is known (declaration + definition)
       if (dec.getInitializer() != null) {
         if (dec.isGlobal()) {
-          return pState.addGlobalReachDef(dec.getName(), edge.getPredecessor(), edge.getSuccessor());
+          return pState.addGlobalReachDef(dec.getQualifiedName(), edge.getPredecessor(), edge.getSuccessor());
         } else {
-          return pState.addLocalReachDef(dec.getName(), edge.getPredecessor(), edge.getSuccessor());
+          return pState.addLocalReachDef(dec.getQualifiedName(), edge.getPredecessor(), edge.getSuccessor());
         }
       }
     }

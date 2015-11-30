@@ -122,10 +122,10 @@ TODO delete */
           if (out instanceof CDeclarationEdge
               && ((CDeclarationEdge) out).getDeclaration() instanceof CVariableDeclaration) {
             if (((CDeclarationEdge) out).getDeclaration().isGlobal()) {
-              globalVariables.add(((CVariableDeclaration) ((CDeclarationEdge) out).getDeclaration()).getName());
+              globalVariables.add(((CVariableDeclaration) ((CDeclarationEdge) out).getDeclaration()).getQualifiedName());
             } else {
               // do not use qualified names because local and global parameters considered separately
-              localVariables.add(((CVariableDeclaration) ((CDeclarationEdge) out).getDeclaration()).getName());
+              localVariables.add(((CVariableDeclaration) ((CDeclarationEdge) out).getDeclaration()).getQualifiedName());
             }
           }
 
@@ -193,7 +193,7 @@ TODO delete */
 
     @Override
     public String visit(CIdExpression pIastIdExpression) {
-      return pIastIdExpression.getName();
+      return pIastIdExpression.getDeclaration().getQualifiedName();
     }
 
     @Override
