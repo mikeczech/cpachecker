@@ -59,6 +59,9 @@ import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdge;
 import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdgeLabel;
 import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
 import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
+import org.sosy_lab.cpachecker.cpa.location.LocationState;
+import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
+import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.DefinitionPoint;
 import org.sosy_lab.cpachecker.cpa.seplogic.interfaces.Handle;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
@@ -148,25 +151,69 @@ public class GMGeneratorAlgorithm implements Algorithm {
     return result;
   }
 
+  private Map<Integer, ReachingDefState> collectReachDef(Map<Integer, Set<AbstractState>> statesPerNode) {
+    Map<Integer, ReachingDefState> result = new HashMap<>();
+    for(Integer nodeNum : statesPerNode.keySet()) {
+      Set<ReachingDefState> reachDefStates = new HashSet<>();
+      // Collect ReachDef states for node
+      for(AbstractState absState : statesPerNode.get(nodeNum)) {
+        ARGState state = (ARGState)absState;
+        CompositeState compState = (CompositeState)state.getWrappedState();
+        for(AbstractState child : compState.getWrappedStates()) {
+          if (child instanceof ReachingDefState) {
+            ReachingDefState reachDef = (ReachingDefState)child;
+            reachDefStates.add(reachDef);
+          }
+        }
+      }
+      // Merge ReachDef states for node
+      Map<String, Set<DefinitionPoint>> localReachDef = new HashMap<>();
+      Map<String, Set<DefinitionPoint>> globalReachDef = new HashMap<>();
+      for(ReachingDefState rdState : reachDefStates) {
+        for(String var : rdState.getLocalReachingDefinitions().keySet()) {
+          if(!localReachDef.containsKey(var))
+            localReachDef.put(var, new HashSet<DefinitionPoint>());
+          localReachDef.get(var).addAll(rdState.getLocalReachingDefinitions().get(var));
+        }
+        for(String var : rdState.getGlobalReachingDefinitions().keySet()) {
+          if(!globalReachDef.containsKey(var))
+            globalReachDef.put(var, new HashSet<DefinitionPoint>());
+          globalReachDef.get(var).addAll(rdState.getGlobalReachingDefinitions().get(var));
+        }
+      }
+      result.put(nodeNum, new ReachingDefState(localReachDef, globalReachDef, null));
+    }
+    return result;
+  }
+
   @Override
   public AlgorithmStatus run(ReachedSet reachedSet)
       throws CPAException, InterruptedException, CPAEnabledAnalysisPropertyViolationException {
     AlgorithmStatus result = algorithm.run(reachedSet);
     logger.log(Level.INFO, "GM generator algorithm started.");
 
-    Set<CFALabelsState> states = new HashSet<>();
+    Set<CFALabelsState> astLocStates = new HashSet<>();
+    Map<Integer, Set<AbstractState>> statesPerNode = new HashMap<>();
     for(AbstractState absState : reachedSet.asCollection()) {
       ARGState state = (ARGState)absState;
       CompositeState compState = (CompositeState)state.getWrappedState();
       for(AbstractState child : compState.getWrappedStates()) {
         if(child instanceof CFALabelsState) {
           CFALabelsState gmState = (CFALabelsState)child;
-          states.add(gmState);
+          astLocStates.add(gmState);
+        }
+        if(child instanceof LocationState) {
+          LocationState locState = (LocationState)child;
+          int nodeNum = locState.getLocationNode().getNodeNumber();
+          if(!statesPerNode.containsKey(nodeNum))
+            statesPerNode.put(nodeNum, new HashSet<AbstractState>());
+          statesPerNode.get(nodeNum).add(absState);
         }
       }
     }
+    collectReachDef(statesPerNode);
 
-    DirectedGraph<GMNode, GMEdge> cfg = generateCFGFromStates(states);
+    DirectedGraph<GMNode, GMEdge> cfg = generateCFGFromStates(astLocStates);
     pruneBlankNodes(cfg);
 
     DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
