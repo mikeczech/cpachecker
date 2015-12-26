@@ -21,9 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
-
-import java.util.Set;
+package org.sosy_lab.cpachecker.cpa.astcollector.visitors;
 
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.cfa.types.c.CArrayType;
@@ -39,44 +37,43 @@ import org.sosy_lab.cpachecker.cfa.types.c.CType;
 import org.sosy_lab.cpachecker.cfa.types.c.CTypeVisitor;
 import org.sosy_lab.cpachecker.cfa.types.c.CTypedefType;
 import org.sosy_lab.cpachecker.cfa.types.c.CVoidType;
-import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdge;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdgeLabel;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
-
-import com.google.common.collect.Sets;
 
 /**
  * Created by zenscr on 30/09/15.
  */
-public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferException> {
+public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
-  public CTypeLabelVisitor(CFAEdge cfaEdge) {
+  public CTypeASTVisitor(CFAEdge cfaEdge) {
     this.cfaEdge = cfaEdge;
   }
 
   @Override
   public ASTree visit(CArrayType pArrayType) throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ARRAY));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.ARRAY));
+    ASTNode root = tree.getRoot();
 
     if(pArrayType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pArrayType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
     ASTree typeTree = pArrayType.getType().accept(
-        new CTypeLabelVisitor(this.cfaEdge));
-    tree.addTree(typeTree, new GMNode(GMNodeLabel.TYPE));
+        new CTypeASTVisitor(this.cfaEdge));
+    tree.addTree(typeTree, new ASTNode(
+        ASTNodeLabel.TYPE));
 
     ASTree lengthTree = pArrayType.getLength().accept(
-        new CExpressionLabelVisitor(this.cfaEdge));
-    tree.addTree(lengthTree, new GMNode(GMNodeLabel.LENGTH));
+        new CExpressionASTVisitor(this.cfaEdge));
+    tree.addTree(lengthTree, new ASTNode(
+        ASTNodeLabel.LENGTH));
 
     return tree;
   }
@@ -84,26 +81,27 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
   @Override
   public ASTree visit(CCompositeType pCompositeType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.COMPOSITE_TYPE));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.COMPOSITE_TYPE));
+    ASTNode root = tree.getRoot();
 
     if(pCompositeType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pCompositeType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
     switch (pCompositeType.getKind()) {
       case ENUM:
-        root.addLabel(GMNodeLabel.ENUM);
+        root.addLabel(ASTNodeLabel.ENUM);
         break;
       case STRUCT:
-        root.addLabel(GMNodeLabel.STRUCT);
+        root.addLabel(ASTNodeLabel.STRUCT);
         break;
       case UNION:
-        root.addLabel(GMNodeLabel.UNION);
+        root.addLabel(ASTNodeLabel.UNION);
     }
     for(CCompositeTypeMemberDeclaration decl : pCompositeType.getMembers()) {
-      ASTree compTypeMemberTypeTree = decl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+      ASTree compTypeMemberTypeTree = decl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
       tree.addTree(compTypeMemberTypeTree);
     }
     return tree;
@@ -112,54 +110,59 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
   @Override
   public ASTree visit(CElaboratedType pElaboratedType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ELABORATED_TYPE));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.ELABORATED_TYPE));
+    ASTNode root = tree.getRoot();
 
     if(pElaboratedType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pElaboratedType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
     switch (pElaboratedType.getKind()) {
       case ENUM:
-        root.addLabel(GMNodeLabel.ENUM);
+        root.addLabel(ASTNodeLabel.ENUM);
         break;
       case STRUCT:
-        root.addLabel(GMNodeLabel.STRUCT);
+        root.addLabel(ASTNodeLabel.STRUCT);
         break;
       case UNION:
-        root.addLabel(GMNodeLabel.UNION);
+        root.addLabel(ASTNodeLabel.UNION);
     }
     return tree;
   }
 
   @Override
   public ASTree visit(CEnumType pEnumType) throws CPATransferException {
-    return new ASTree(new GMNode(GMNodeLabel.ENUM_TYPE));
+    return new ASTree(new ASTNode(
+        ASTNodeLabel.ENUM_TYPE));
   }
 
   @Override
   public ASTree visit(CFunctionType pFunctionType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNCTION_TYPE));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.FUNCTION_TYPE));
+    ASTNode root = tree.getRoot();
 
     if(pFunctionType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pFunctionType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
     if(pFunctionType.getParameters().size() > 0) {
-      ASTree paramTypeTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
+      ASTree paramTypeTree = new ASTree(new ASTNode(
+          ASTNodeLabel.PARAM_TYPES));
       for (CType type : pFunctionType.getParameters()) {
-        ASTree typeTree = type.accept(new CTypeLabelVisitor(this.cfaEdge));
+        ASTree typeTree = type.accept(new CTypeASTVisitor(this.cfaEdge));
         paramTypeTree.addTree(typeTree);
       }
       tree.addTree(paramTypeTree);
     }
     ASTree returnTypeTree = pFunctionType.getReturnType().accept(
-        new CTypeLabelVisitor(this.cfaEdge));
-    tree.addTree(returnTypeTree, new GMNode(GMNodeLabel.RETURN_TYPE));
+        new CTypeASTVisitor(this.cfaEdge));
+    tree.addTree(returnTypeTree, new ASTNode(
+        ASTNodeLabel.RETURN_TYPE));
 
     return tree;
   }
@@ -167,15 +170,16 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
   @Override
   public ASTree visit(CPointerType pPointerType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.POINTER_TYPE));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.POINTER_TYPE));
+    ASTNode root = tree.getRoot();
 
     if(pPointerType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pPointerType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
-    ASTree typeTree = pPointerType.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    ASTree typeTree = pPointerType.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
 
     return tree;
@@ -191,52 +195,52 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
   public ASTree visit(CSimpleType pSimpleType)
       throws CPATransferException {
 
-    ASTree tree = new ASTree(new GMNode());
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode());
+    ASTNode root = tree.getRoot();
 
     if(pSimpleType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pSimpleType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
     if(pSimpleType.isUnsigned())
-      root.addLabel(GMNodeLabel.UNSIGNED);
+      root.addLabel(ASTNodeLabel.UNSIGNED);
     switch(pSimpleType.getType()) {
       case BOOL:
-        root.addLabel(GMNodeLabel.BOOL);
+        root.addLabel(ASTNodeLabel.BOOL);
         break;
       case CHAR:
-        root.addLabel(GMNodeLabel.CHAR);
+        root.addLabel(ASTNodeLabel.CHAR);
         break;
       case INT:
-        root.addLabel(GMNodeLabel.INT);
+        root.addLabel(ASTNodeLabel.INT);
         break;
       case FLOAT:
-        root.addLabel(GMNodeLabel.FLOAT);
+        root.addLabel(ASTNodeLabel.FLOAT);
         break;
       case DOUBLE:
-        root.addLabel(GMNodeLabel.DOUBLE);
+        root.addLabel(ASTNodeLabel.DOUBLE);
         break;
       default:
         if(pSimpleType.isLong()) {
-          root.addLabel(GMNodeLabel.LONG);
+          root.addLabel(ASTNodeLabel.LONG);
           break;
         }
         if(pSimpleType.isLongLong()) {
-          root.addLabel(GMNodeLabel.LONGLONG);
+          root.addLabel(ASTNodeLabel.LONGLONG);
           break;
         }
         if(pSimpleType.isShort()) {
-          root.addLabel(GMNodeLabel.SHORT);
+          root.addLabel(ASTNodeLabel.SHORT);
           break;
         }
         if(pSimpleType.isVolatile()) {
-          root.addLabel(GMNodeLabel.VOLATILE);
+          root.addLabel(ASTNodeLabel.VOLATILE);
           break;
         }
         // Can be used as standalone type?
         if(pSimpleType.isUnsigned()) {
-          root.addLabel(GMNodeLabel.UNSIGNED);
+          root.addLabel(ASTNodeLabel.UNSIGNED);
           break;
         }
         throw new UnsupportedCCodeException("Unspecified declaration type: CSimpleType", this.cfaEdge);
@@ -247,22 +251,25 @@ public class CTypeLabelVisitor implements CTypeVisitor<ASTree, CPATransferExcept
   @Override
   public ASTree visit(CTypedefType pTypedefType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.TYPEDEF_TYPE));
-    ASTree realTypeTree = pTypedefType.getRealType().accept(new CTypeLabelVisitor(this.cfaEdge));
-    tree.addTree(realTypeTree, new GMNode(GMNodeLabel.REAL_TYPE));
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.TYPEDEF_TYPE));
+    ASTree realTypeTree = pTypedefType.getRealType().accept(new CTypeASTVisitor(this.cfaEdge));
+    tree.addTree(realTypeTree, new ASTNode(
+        ASTNodeLabel.REAL_TYPE));
     return tree;
   }
 
   @Override
   public ASTree visit(CVoidType pVoidType)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.VOID_TYPE));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.VOID_TYPE));
+    ASTNode root = tree.getRoot();
 
     if(pVoidType.isConst())
-      root.addLabel(GMNodeLabel.CONST);
+      root.addLabel(ASTNodeLabel.CONST);
     if(pVoidType.isVolatile())
-      root.addLabel(GMNodeLabel.VOLATILE);
+      root.addLabel(ASTNodeLabel.VOLATILE);
 
     return tree;
   }

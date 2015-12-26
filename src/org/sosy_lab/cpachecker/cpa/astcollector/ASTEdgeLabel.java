@@ -21,11 +21,11 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.io.Serializable;
 
-public enum GMEdgeLabel implements Serializable {
+public enum ASTEdgeLabel implements Serializable {
   SYNTACTIC,
   DATA_DEPENDENCE,
   CONTROL_DEPENDENCE,

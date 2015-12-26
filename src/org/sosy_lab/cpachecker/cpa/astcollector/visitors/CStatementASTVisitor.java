@@ -21,9 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
-
-import java.util.Set;
+package org.sosy_lab.cpachecker.cpa.astcollector.visitors;
 
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionAssignmentStatement;
@@ -32,21 +30,19 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CStatementVisitor;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
-import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
-
-import com.google.common.collect.Sets;
 
 /**
  * Created by zenscr on 01/10/15.
  */
-public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATransferException> {
+public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
-  public CStatementLabelVisitor(CFAEdge cfaEdge) {
+  public CStatementASTVisitor(CFAEdge cfaEdge) {
     this.cfaEdge = cfaEdge;
   }
 
@@ -54,19 +50,20 @@ public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATran
   public ASTree visit(CExpressionStatement pIastExpressionStatement)
       throws CPATransferException {
     return pIastExpressionStatement.getExpression().accept(
-        new CExpressionLabelVisitor(this.cfaEdge));
+        new CExpressionASTVisitor(this.cfaEdge));
   }
 
   @Override
   public ASTree visit(
       CExpressionAssignmentStatement pIastExpressionAssignmentStatement)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.ASSIGNMENT));
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.ASSIGNMENT));
     ASTree leftTree = pIastExpressionAssignmentStatement.getLeftHandSide().accept(
-        new CExpressionLabelVisitor(this.cfaEdge));
+        new CExpressionASTVisitor(this.cfaEdge));
     tree.addTree(leftTree);
     ASTree rightTree = pIastExpressionAssignmentStatement.getRightHandSide().accept(
-        new CExpressionLabelVisitor(this.cfaEdge));
+        new CExpressionASTVisitor(this.cfaEdge));
     tree.addTree(rightTree);
     return tree;
   }
@@ -74,14 +71,16 @@ public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATran
   @Override public ASTree visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL_ASSIGN));
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.FUNC_CALL_ASSIGN));
     ASTree leftTree = pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(
-        new CExpressionLabelVisitor(this.cfaEdge));
+        new CExpressionASTVisitor(this.cfaEdge));
     tree.addTree(leftTree);
     if(pIastFunctionCallAssignmentStatement.getRightHandSide().getParameterExpressions().size() > 0) {
-      ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
+      ASTree paramsTree = new ASTree(new ASTNode(
+          ASTNodeLabel.PARAMS));
       for(CExpression paramExp : pIastFunctionCallAssignmentStatement.getRightHandSide().getParameterExpressions()) {
-        ASTree paramExpTree = paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
+        ASTree paramExpTree = paramExp.accept(new CExpressionASTVisitor(this.cfaEdge));
         paramsTree.addTree(paramExpTree);
       }
       tree.addTree(paramsTree);
@@ -92,14 +91,16 @@ public class CStatementLabelVisitor implements CStatementVisitor<ASTree, CPATran
   @Override
   public ASTree visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL));
+    ASTree tree = new ASTree(new ASTNode(
+        ASTNodeLabel.FUNC_CALL));
     // add labels for arguments as well
     if(pIastFunctionCallStatement.getFunctionCallExpression().getParameterExpressions().size() > 0) {
-      ASTree paramsTree = new ASTree(new GMNode(GMNodeLabel.PARAMS));
+      ASTree paramsTree = new ASTree(new ASTNode(
+          ASTNodeLabel.PARAMS));
       for (CExpression paramExp : pIastFunctionCallStatement
           .getFunctionCallExpression().getParameterExpressions()) {
         ASTree paramExpTree =
-            paramExp.accept(new CExpressionLabelVisitor(this.cfaEdge));
+            paramExp.accept(new CExpressionASTVisitor(this.cfaEdge));
         paramsTree.addTree(paramExpTree);
       }
       tree.addTree(paramsTree);

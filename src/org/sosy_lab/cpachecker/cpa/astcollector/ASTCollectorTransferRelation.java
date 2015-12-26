@@ -21,7 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 
 import org.sosy_lab.common.log.LogManager;
 import org.sosy_lab.cpachecker.cfa.ast.c.CDeclaration;
@@ -39,7 +38,6 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CParameterDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CStatement;
 import org.sosy_lab.cpachecker.cfa.model.BlankEdge;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
-import org.sosy_lab.cpachecker.cfa.model.CFANode;
 import org.sosy_lab.cpachecker.cfa.model.c.CAssumeEdge;
 import org.sosy_lab.cpachecker.cfa.model.c.CDeclarationEdge;
 import org.sosy_lab.cpachecker.cfa.model.c.CFunctionCallEdge;
@@ -51,52 +49,51 @@ import org.sosy_lab.cpachecker.core.defaults.ForwardingTransferRelation;
 import org.sosy_lab.cpachecker.core.defaults.SingletonPrecision;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Precision;
-import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsState.EdgeInfo;
-import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CExpressionLabelVisitor;
-import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CSimpleDeclLabelVisitor;
-import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CStatementLabelVisitor;
-import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CStatementVariablesCollectingVisitor;
-import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CVariablesCollectingVisitor;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.EdgeInfo;
+import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CExpressionASTVisitor;
+import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CSimpleDeclASTVisitor;
+import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CStatementASTVisitor;
+import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CStatementVariablesCollectingVisitor;
+import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CVariablesCollectingVisitor;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCodeException;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.collect.Sets;
 
 
-public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALabelsState, CFALabelsState, SingletonPrecision> {
+public class ASTCollectorTransferRelation extends ForwardingTransferRelation<ASTCollectorState, ASTCollectorState, SingletonPrecision> {
 
   private LogManager logger;
 
-  private Map<Integer, CFALabelsState> controlLocStateCache = new HashMap<>();
+  private Map<Integer, ASTCollectorState> controlLocStateCache = new HashMap<>();
 
-  public CFALabelsTransferRelation(LogManager pLogger) {
+  public ASTCollectorTransferRelation(LogManager pLogger) {
     logger = pLogger;
   }
 
-  static final Map<String, GMNodeLabel> SPECIAL_FUNCTIONS;
+  static final Map<String, ASTNodeLabel> SPECIAL_FUNCTIONS;
 
   static {
-    Builder<String, GMNodeLabel> builder = ImmutableMap.builder();
-    builder.put("pthread_create", GMNodeLabel.PTHREAD);
-    builder.put("pthread_exit", GMNodeLabel.PTHREAD);
-    builder.put("__VERIFIER_error", GMNodeLabel.VERIFIER_ERROR);
-    builder.put("__VERIFIER_assert", GMNodeLabel.VERIFIER_ASSERT);
-    builder.put("__VERIFIER_assume", GMNodeLabel.VERIFIER_ASSUME);
-    builder.put("__VERIFIER_atomic_begin", GMNodeLabel.VERIFIER_ATOMIC_BEGIN);
-    builder.put("__VERIFIER_atomic_end", GMNodeLabel.VERIFIER_ATOMIC_END);
-    builder.put("__VERIFIER_nondet", GMNodeLabel.INPUT);
-    builder.put("malloc", GMNodeLabel.MALLOC);
-    builder.put("free", GMNodeLabel.FREE);
+    Builder<String, ASTNodeLabel> builder = ImmutableMap.builder();
+    builder.put("pthread_create", ASTNodeLabel.PTHREAD);
+    builder.put("pthread_exit", ASTNodeLabel.PTHREAD);
+    builder.put("__VERIFIER_error", ASTNodeLabel.VERIFIER_ERROR);
+    builder.put("__VERIFIER_assert", ASTNodeLabel.VERIFIER_ASSERT);
+    builder.put("__VERIFIER_assume", ASTNodeLabel.VERIFIER_ASSUME);
+    builder.put("__VERIFIER_atomic_begin", ASTNodeLabel.VERIFIER_ATOMIC_BEGIN);
+    builder.put("__VERIFIER_atomic_end", ASTNodeLabel.VERIFIER_ATOMIC_END);
+    builder.put("__VERIFIER_nondet", ASTNodeLabel.INPUT);
+    builder.put("malloc", ASTNodeLabel.MALLOC);
+    builder.put("free", ASTNodeLabel.FREE);
     SPECIAL_FUNCTIONS = builder.build();
   }
 
-  public static GMNodeLabel extractControlLabel(CFAEdge pCFAEdge) {
+  public static ASTNodeLabel extractControlLabel(CFAEdge pCFAEdge) {
     if(pCFAEdge.getPredecessor().isLoopStart()) {
-      return GMNodeLabel.LOOP;
+      return ASTNodeLabel.LOOP;
     }
-    return GMNodeLabel.BRANCH;
+    return ASTNodeLabel.BRANCH;
   }
 
   @Override
@@ -106,16 +103,17 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
   }
 
   @Override
-  protected CFALabelsState handleAssumption(CAssumeEdge cfaEdge,
+  protected ASTCollectorState handleAssumption(CAssumeEdge cfaEdge,
       CExpression expression, boolean truthAssumption)
       throws CPATransferException {
     int predecessor = cfaEdge.getPredecessor().getNodeNumber();
-    CFALabelsState state;
+    ASTCollectorState state;
     if(!controlLocStateCache.containsKey(predecessor)) {
-      ASTree tree = new ASTree(new GMNode(extractControlLabel(cfaEdge)));
-      ASTree assumeExpTree = expression.accept(new CExpressionLabelVisitor(cfaEdge));
+      ASTree
+          tree = new ASTree(new ASTNode(extractControlLabel(cfaEdge)));
+      ASTree assumeExpTree = expression.accept(new CExpressionASTVisitor(cfaEdge));
       tree.addTree(assumeExpTree);
-      state = new CFALabelsState(cfaEdge, tree, expression.accept(
+      state = new ASTCollectorState(cfaEdge, tree, expression.accept(
           new CVariablesCollectingVisitor(cfaEdge.getPredecessor())));
       controlLocStateCache.put(predecessor, state);
     } else {
@@ -124,76 +122,82 @@ public class CFALabelsTransferRelation extends ForwardingTransferRelation<CFALab
     }
     EdgeInfo edgeInfo = state.getLastAddedEdgeInfo();
     if(truthAssumption)
-      edgeInfo.addLabel(GMEdgeLabel.ASSUME_TRUE);
+      edgeInfo.addLabel(ASTEdgeLabel.ASSUME_TRUE);
     else
-      edgeInfo.addLabel(GMEdgeLabel.ASSUME_FALSE);
+      edgeInfo.addLabel(ASTEdgeLabel.ASSUME_FALSE);
     return state;
   }
 
   @Override
-  protected CFALabelsState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
+  protected ASTCollectorState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
       List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNC_CALL));
-    GMNode root = tree.getRoot();
+    ASTree
+        tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    ASTNode root = tree.getRoot();
     for(String key : SPECIAL_FUNCTIONS.keySet()) {
       if(calledFunctionName.startsWith(key))
         root.addLabel(SPECIAL_FUNCTIONS.get(key));
     }
     if(arguments.size() > 0) {
-      ASTree argsTree = new ASTree(new GMNode(GMNodeLabel.ARGUMENTS));
+      ASTree
+          argsTree = new ASTree(new ASTNode(ASTNodeLabel.ARGUMENTS));
       for (CExpression arg : arguments) {
-        argsTree.addTree(arg.accept(new CExpressionLabelVisitor(cfaEdge)));
+        argsTree.addTree(arg.accept(new CExpressionASTVisitor(cfaEdge)));
       }
       tree.addTree(argsTree);
     }
     Set<String> vars = new HashSet<>();
     for(CExpression exp : arguments)
       vars.addAll(exp.accept(new CVariablesCollectingVisitor(cfaEdge.getPredecessor())));
-    return new CFALabelsState(cfaEdge, tree);
+    return new ASTCollectorState(cfaEdge, tree);
   }
 
   @Override
-  protected CFALabelsState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
+  protected ASTCollectorState handleFunctionReturnEdge(CFunctionReturnEdge cfaEdge,
       CFunctionSummaryEdge fnkCall, CFunctionCall summaryExpr,
       String callerFunctionName) throws CPATransferException {
-    return new CFALabelsState(cfaEdge, new ASTree(new GMNode(GMNodeLabel.RETURN)));
+    return new ASTCollectorState(cfaEdge, new ASTree(new ASTNode(ASTNodeLabel.RETURN)));
   }
 
   @Override
-  protected CFALabelsState handleDeclarationEdge(CDeclarationEdge cfaEdge,
+  protected ASTCollectorState handleDeclarationEdge(CDeclarationEdge cfaEdge,
       CDeclaration decl) throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.DECL));
-    GMNode root = tree.getRoot();
+    ASTree
+        tree = new ASTree(new ASTNode(ASTNodeLabel.DECL));
+    ASTNode root = tree.getRoot();
     if(decl.isGlobal())
-      root.addLabel(GMNodeLabel.GLOBAL);
-    ASTree declTree = decl.accept(new CSimpleDeclLabelVisitor(cfaEdge));
+      root.addLabel(ASTNodeLabel.GLOBAL);
+    ASTree
+        declTree = decl.accept(new CSimpleDeclASTVisitor(cfaEdge));
     tree.addTree(declTree);
-    return new CFALabelsState(cfaEdge, tree);
+    return new ASTCollectorState(cfaEdge, tree);
   }
 
   @Override
-  protected CFALabelsState handleStatementEdge(CStatementEdge cfaEdge,
+  protected ASTCollectorState handleStatementEdge(CStatementEdge cfaEdge,
       CStatement statement) throws CPATransferException {
-    ASTree tree = statement.accept(new CStatementLabelVisitor(cfaEdge));
-    return new CFALabelsState(cfaEdge, tree,
+    ASTree
+        tree = statement.accept(new CStatementASTVisitor(cfaEdge));
+    return new ASTCollectorState(cfaEdge, tree,
         statement.accept(new CStatementVariablesCollectingVisitor(cfaEdge.getPredecessor())));
   }
 
   @Override
-  protected CFALabelsState handleReturnStatementEdge(
+  protected ASTCollectorState handleReturnStatementEdge(
       CReturnStatementEdge cfaEdge) throws CPATransferException {
-    return new CFALabelsState(cfaEdge, new ASTree(new GMNode(GMNodeLabel.RETURN)));
+    return new ASTCollectorState(cfaEdge, new ASTree(new ASTNode(ASTNodeLabel.RETURN)));
   }
 
   @Override
-  protected CFALabelsState handleBlankEdge(BlankEdge cfaEdge) {
-    ASTree blankTree = new ASTree(new GMNode(GMNodeLabel.BLANK));
-    return new CFALabelsState(cfaEdge, blankTree);
+  protected ASTCollectorState handleBlankEdge(BlankEdge cfaEdge) {
+    ASTree
+        blankTree = new ASTree(new ASTNode(ASTNodeLabel.BLANK));
+    return new ASTCollectorState(cfaEdge, blankTree);
   }
 
   @Override
-  protected CFALabelsState handleFunctionSummaryEdge(
+  protected ASTCollectorState handleFunctionSummaryEdge(
       CFunctionSummaryEdge cfaEdge) throws CPATransferException {
     throw new UnsupportedCodeException("SummaryEdge", cfaEdge);
   }

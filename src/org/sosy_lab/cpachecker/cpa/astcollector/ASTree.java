@@ -21,9 +21,8 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
-import org.eclipse.jdt.core.dom.AST;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.graph.DefaultDirectedGraph;
 
@@ -32,44 +31,44 @@ import org.jgrapht.graph.DefaultDirectedGraph;
  */
 public class ASTree {
 
-  private DirectedGraph<GMNode, GMEdge> tree = new DefaultDirectedGraph<>(GMEdge.class);
+  private DirectedGraph<ASTNode, ASTEdge> tree = new DefaultDirectedGraph<>(ASTEdge.class);
 
-  private GMNode root = null;
+  private ASTNode root = null;
 
-  public ASTree(GMNode pRoot) {
+  public ASTree(ASTNode pRoot) {
     this.tree.addVertex(pRoot);
     this.root = pRoot;
   }
 
   public ASTree() { }
 
-  public DirectedGraph<GMNode, GMEdge> asGraph() {
+  public DirectedGraph<ASTNode, ASTEdge> asGraph() {
     return this.tree;
   }
 
   private void appendTree(ASTree pTree) {
-    for(GMNode node : pTree.tree.vertexSet())
+    for(ASTNode node : pTree.tree.vertexSet())
       this.tree.addVertex(node);
-    for(GMEdge edge : pTree.tree.edgeSet())
-      this.tree.addEdge(edge.getV1(), edge.getV2(), edge);
+    for(ASTEdge edge : pTree.tree.edgeSet())
+      this.tree.addEdge(edge.getSourceNode(), edge.getTargetNode(), edge);
   }
 
   public void addTree(ASTree pTree) {
     appendTree(pTree);
     this.tree.addEdge(pTree.getRoot(), root,
-        new GMEdge(pTree.getRoot(), root, GMEdgeLabel.SYNTACTIC));
+        new ASTEdge(pTree.getRoot(), root, ASTEdgeLabel.SYNTACTIC));
   }
 
-  public void addTree(ASTree pTree, GMNode connectorNode) {
+  public void addTree(ASTree pTree, ASTNode connectorNode) {
     appendTree(pTree);
     this.tree.addVertex(connectorNode);
     this.tree.addEdge(connectorNode, root,
-        new GMEdge(connectorNode, root, GMEdgeLabel.SYNTACTIC));
+        new ASTEdge(connectorNode, root, ASTEdgeLabel.SYNTACTIC));
     this.tree.addEdge(pTree.getRoot(), connectorNode,
-        new GMEdge(pTree.getRoot(), connectorNode, GMEdgeLabel.SYNTACTIC));
+        new ASTEdge(pTree.getRoot(), connectorNode, ASTEdgeLabel.SYNTACTIC));
   }
 
-  public GMNode getRoot() {
+  public ASTNode getRoot() {
     return this.root;
   }
 

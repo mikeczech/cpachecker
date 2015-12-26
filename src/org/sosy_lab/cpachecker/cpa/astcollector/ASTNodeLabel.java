@@ -21,7 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.io.Serializable;
 
@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 
-public enum GMNodeLabel implements Serializable {
+public enum ASTNodeLabel implements Serializable {
 
   // New
   LOOP,

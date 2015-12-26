@@ -21,13 +21,10 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels.visitors;
+package org.sosy_lab.cpachecker.cpa.astcollector.visitors;
 
 import java.util.Map;
-import java.util.Set;
 
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.graph.DefaultDirectedGraph;
 import org.sosy_lab.cpachecker.cfa.ast.c.CComplexTypeDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CParameterDeclaration;
@@ -36,64 +33,62 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CTypeDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CVariableDeclaration;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.cfa.types.c.CEnumType.CEnumerator;
-import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdge;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.collect.Sets;
 
 /**
  * Created by zenscr on 30/09/15.
  */
-public class CSimpleDeclLabelVisitor
+public class CSimpleDeclASTVisitor
     implements CSimpleDeclarationVisitor<ASTree, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
   // TODO put this in one file
-  static final Map<String, GMNodeLabel> SPECIAL_FUNCTIONS;
+  static final Map<String, ASTNodeLabel> SPECIAL_FUNCTIONS;
 
   static {
-    Builder<String, GMNodeLabel> builder = ImmutableMap.builder();
-    builder.put("pthread_create", GMNodeLabel.PTHREAD);
-    builder.put("pthread_exit", GMNodeLabel.PTHREAD);
-    builder.put("__VERIFIER_error", GMNodeLabel.VERIFIER_ERROR);
-    builder.put("__VERIFIER_assert", GMNodeLabel.VERIFIER_ASSERT);
-    builder.put("__VERIFIER_assume", GMNodeLabel.VERIFIER_ASSUME);
-    builder.put("__VERIFIER_atomic_begin", GMNodeLabel.VERIFIER_ATOMIC_BEGIN);
-    builder.put("__VERIFIER_atomic_end", GMNodeLabel.VERIFIER_ATOMIC_END);
-    builder.put("__VERIFIER_nondet", GMNodeLabel.INPUT);
-    builder.put("malloc", GMNodeLabel.MALLOC);
-    builder.put("free", GMNodeLabel.FREE);
+    Builder<String, ASTNodeLabel> builder = ImmutableMap.builder();
+    builder.put("pthread_create", ASTNodeLabel.PTHREAD);
+    builder.put("pthread_exit", ASTNodeLabel.PTHREAD);
+    builder.put("__VERIFIER_error", ASTNodeLabel.VERIFIER_ERROR);
+    builder.put("__VERIFIER_assert", ASTNodeLabel.VERIFIER_ASSERT);
+    builder.put("__VERIFIER_assume", ASTNodeLabel.VERIFIER_ASSUME);
+    builder.put("__VERIFIER_atomic_begin", ASTNodeLabel.VERIFIER_ATOMIC_BEGIN);
+    builder.put("__VERIFIER_atomic_end", ASTNodeLabel.VERIFIER_ATOMIC_END);
+    builder.put("__VERIFIER_nondet", ASTNodeLabel.INPUT);
+    builder.put("malloc", ASTNodeLabel.MALLOC);
+    builder.put("free", ASTNodeLabel.FREE);
     SPECIAL_FUNCTIONS = builder.build();
   }
 
-  public CSimpleDeclLabelVisitor(CFAEdge cfaEdge) {
+  public CSimpleDeclASTVisitor(CFAEdge cfaEdge) {
     this.cfaEdge = cfaEdge;
   }
 
   @Override
   public ASTree visit(CFunctionDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.FUNCTION_DECL));
-    GMNode root = tree.getRoot();
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNCTION_DECL));
+    ASTNode root = tree.getRoot();
     for(String key : SPECIAL_FUNCTIONS.keySet()) {
       if(pDecl.getName().startsWith(key))
         root.addLabel(SPECIAL_FUNCTIONS.get(key));
     }
-    ASTree returnTypeTree = pDecl.getType().getReturnType().accept(new CTypeLabelVisitor(this.cfaEdge));
-    tree.addTree(returnTypeTree, new GMNode(GMNodeLabel.RETURN_TYPE));
+    ASTree returnTypeTree = pDecl.getType().getReturnType().accept(new CTypeASTVisitor(this.cfaEdge));
+    tree.addTree(returnTypeTree, new ASTNode(ASTNodeLabel.RETURN_TYPE));
 
     if(pDecl.getParameters().size() > 0) {
-      ASTree paramTypesTree = new ASTree(new GMNode(GMNodeLabel.PARAM_TYPES));
+      ASTree paramTypesTree = new ASTree(new ASTNode(ASTNodeLabel.PARAM_TYPES));
       for (CParameterDeclaration param : pDecl.getParameters()) {
         ASTree typeTree =
-            param.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+            param.getType().accept(new CTypeASTVisitor(this.cfaEdge));
         paramTypesTree.addTree(typeTree);
       }
       tree.addTree(paramTypesTree);
@@ -104,8 +99,8 @@ public class CSimpleDeclLabelVisitor
   @Override
   public ASTree visit(CComplexTypeDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.COMPLEX_TYPE_DECL));
-    ASTree typeTree = pDecl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.COMPLEX_TYPE_DECL));
+    ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
     return tree;
   }
@@ -113,8 +108,8 @@ public class CSimpleDeclLabelVisitor
   @Override
   public ASTree visit(CTypeDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.TYPE_DECL));
-    ASTree typeTree = pDecl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.TYPE_DECL));
+    ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
     return tree;
   }
@@ -122,8 +117,8 @@ public class CSimpleDeclLabelVisitor
   @Override
   public ASTree visit(CVariableDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.VARIABLE_DECL));
-    ASTree typeTree = pDecl.getType().accept(new CTypeLabelVisitor(this.cfaEdge));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.VARIABLE_DECL));
+    ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
     // Todo: add initializer
     return tree;

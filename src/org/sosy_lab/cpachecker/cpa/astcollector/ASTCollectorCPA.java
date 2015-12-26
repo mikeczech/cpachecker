@@ -21,7 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
@@ -45,23 +45,23 @@ import org.sosy_lab.cpachecker.core.interfaces.StateSpacePartition;
 import org.sosy_lab.cpachecker.core.interfaces.StopOperator;
 import org.sosy_lab.cpachecker.core.interfaces.TransferRelation;
 
-@Options(prefix="cpa.cfalabels")
-public class CFALabelsCPA implements ConfigurableProgramAnalysis {
+@Options(prefix="cpa.astcollector")
+public class ASTCollectorCPA implements ConfigurableProgramAnalysis {
 
   private final AbstractDomain domain = new FlatLatticeDomain();
-  private final CFALabelsTransferRelation transferRelation;
+  private final ASTCollectorTransferRelation transferRelation;
   private final StopOperator stopOperator= new StopSepOperator(domain);
 
   private LogManager logger;
 
-  public CFALabelsCPA(LogManager pLogger, Configuration config) throws InvalidConfigurationException {
+  public ASTCollectorCPA(LogManager pLogger, Configuration config) throws InvalidConfigurationException {
     config.inject(this);
     logger = pLogger;
-    transferRelation = new CFALabelsTransferRelation(logger);
+    transferRelation = new ASTCollectorTransferRelation(logger);
   }
 
   public static CPAFactory factory() {
-    return AutomaticCPAFactory.forType(CFALabelsCPA.class);
+    return AutomaticCPAFactory.forType(ASTCollectorCPA.class);
   }
 
   @Override
@@ -91,7 +91,7 @@ public class CFALabelsCPA implements ConfigurableProgramAnalysis {
 
   @Override
   public AbstractState getInitialState(CFANode pNode, StateSpacePartition pPartition) {
-    return CFALabelsState.TOP;
+    return ASTCollectorState.TOP;
   }
 
   @Override

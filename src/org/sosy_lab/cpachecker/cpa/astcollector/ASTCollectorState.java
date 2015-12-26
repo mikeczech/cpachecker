@@ -21,7 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.io.Serializable;
 import java.io.StringWriter;
@@ -31,7 +31,6 @@ import java.util.Set;
 import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.IntegerNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
-import org.jgrapht.graph.DefaultDirectedGraph;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Graphable;
@@ -39,24 +38,24 @@ import org.sosy_lab.cpachecker.core.interfaces.Graphable;
 import org.jgrapht.ext.DOTExporter;
 
 
-public class CFALabelsState
+public class ASTCollectorState
     implements Serializable, AbstractState, Graphable {
 
   public class EdgeInfo {
     private int source;
     private int target;
-    private Set<GMEdgeLabel> labels = new HashSet<>();
+    private Set<ASTEdgeLabel> labels = new HashSet<>();
 
     public EdgeInfo(int pSource, int pTarget) {
       source = pSource;
       target = pTarget;
     }
 
-    public Set<GMEdgeLabel> getLabels() {
+    public Set<ASTEdgeLabel> getLabels() {
       return labels;
     }
 
-    public void addLabel(GMEdgeLabel pLabel) {
+    public void addLabel(ASTEdgeLabel pLabel) {
       this.labels.add(pLabel);
     }
 
@@ -105,16 +104,16 @@ public class CFALabelsState
 
   private EdgeInfo lastAddedEdgeInfo = null;
 
-  public final static CFALabelsState TOP = new CFALabelsState();
+  public final static ASTCollectorState TOP = new ASTCollectorState();
 
-  private CFALabelsState() {
+  private ASTCollectorState() {
     this.tree = new ASTree();
   }
-  public CFALabelsState(CFAEdge pEdge, ASTree pTree) {
+  public ASTCollectorState(CFAEdge pEdge, ASTree pTree) {
     this(pEdge, pTree, new HashSet<String>());
   }
 
-  public CFALabelsState(CFAEdge pEdge, ASTree pTree, Set<String> pVars) {
+  public ASTCollectorState(CFAEdge pEdge, ASTree pTree, Set<String> pVars) {
     EdgeInfo edgeInfo = new EdgeInfo(
         pEdge.getPredecessor().getNodeNumber(),
         pEdge.getSuccessor().getNodeNumber());
@@ -156,17 +155,17 @@ public class CFALabelsState
   @Override
   public String toString() {
     StringWriter strWriter = new StringWriter();
-    DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
+    DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
         new IntegerNameProvider(),
-        new VertexNameProvider<GMNode>() {
+        new VertexNameProvider<ASTNode>() {
           @Override
-          public String getVertexName(GMNode o) {
+          public String getVertexName(ASTNode o) {
             return o.toString();
           }
         },
-        new EdgeNameProvider<GMEdge>() {
+        new EdgeNameProvider<ASTEdge>() {
           @Override
-          public String getEdgeName(GMEdge o) {
+          public String getEdgeName(ASTEdge o) {
             return o.toString();
           }
         });
@@ -184,7 +183,7 @@ public class CFALabelsState
       return false;
     }
 
-    CFALabelsState that = (CFALabelsState)o;
+    ASTCollectorState that = (ASTCollectorState)o;
 
     if (edgeInfoSet != null ? !edgeInfoSet.equals(that.edgeInfoSet)
         : that.edgeInfoSet != null) {

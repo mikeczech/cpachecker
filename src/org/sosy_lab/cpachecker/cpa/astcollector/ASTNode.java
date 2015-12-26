@@ -21,58 +21,77 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.cpa.cfalabels;
+package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jgrapht.graph.DefaultEdge;
-
 /**
  * Created by zenscr on 24/11/15.
  */
-public class GMEdge extends DefaultEdge {
+public class ASTNode {
 
-  private GMNode v1;
+  private static int idCounter = 0;
 
-  private GMNode v2;
+  private final int id;
 
-  private List<GMEdgeLabel> gmEdgeLabels = new ArrayList<>();
+  private List<ASTNodeLabel> labels = new ArrayList<>();
 
-  public GMEdge(GMNode pV1, GMNode pV2, List<GMEdgeLabel> pEdgeLabels) {
-    this.v1 = pV1;
-    this.v2 = pV2;
-    this.gmEdgeLabels.addAll(pEdgeLabels);
+  public ASTNode(ASTNodeLabel pLabel) {
+    this();
+    this.labels.add(pLabel);
   }
 
-  public GMEdge(GMNode pV1, GMNode pV2, GMEdgeLabel pEdgeLabel) {
-    this.v1 = pV1;
-    this.v2 = pV2;
-    this.gmEdgeLabels.add(pEdgeLabel);
+  public ASTNode() {
+    id = idCounter;
+    idCounter++;
   }
 
-  public List<GMEdgeLabel> getGmEdgeLabels() {
-    return gmEdgeLabels;
+  public boolean isBlank() {
+    if(labels.contains(ASTNodeLabel.BLANK)) {
+      assert labels.size() == 1;
+      return true;
+    }
+    return false;
   }
 
-  public GMNode getV1() {
-    return v1;
+  public List<ASTNodeLabel> getLabels() {
+    return this.labels;
   }
 
-  public GMNode getV2() {
-    return v2;
+  public void addLabel(ASTNodeLabel pLabel) {
+    this.labels.add(pLabel);
   }
 
-  public void addLabel(GMEdgeLabel pLabel) {
-    gmEdgeLabels.add(pLabel);
-  }
-
+  @Override
   public String toString() {
     StringBuilder labelList = new StringBuilder();
-    for (GMEdgeLabel label : gmEdgeLabels) {
+    for (ASTNodeLabel label : labels) {
       labelList.append(label.name() + ",");
     }
     return new String(labelList.deleteCharAt(labelList.length() - 1));
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ASTNode astNode = (ASTNode)o;
+
+    if (id != astNode.id) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return id;
+  }
 }
