@@ -247,7 +247,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     pruneBlankNodes(gm);
 
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
-        new IntegerNameProvider<ASTNode>(),
+        new VertexNameProvider<ASTNode>() {
+          @Override
+          public String getVertexName(ASTNode o) {
+            return String.valueOf(o.getId());
+          }
+        },
         new VertexNameProvider<ASTNode>() {
           @Override
           public String getVertexName(ASTNode o) {

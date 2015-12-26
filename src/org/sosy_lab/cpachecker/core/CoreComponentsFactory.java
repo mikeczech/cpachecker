@@ -123,9 +123,9 @@ public class CoreComponentsFactory {
       description="use a proof check algorithm to validate a previously generated proof")
   private boolean useProofCheckAlgorithm = false;
 
-  @Option(secure=true, name="algorithm.gmgen",
+  @Option(secure=true, name="algorithm.graphgen",
       description="activate generation of graph model from reached set")
-  private boolean useGMGenAlgorithm = false;
+  private boolean useGraphGenAlgorithm = false;
 
   @Option(secure=true, name="algorithm.propertyCheck",
       description = "do analysis and then check "
@@ -236,7 +236,7 @@ public class CoreComponentsFactory {
             new AlgorithmWithPropertyCheck(algorithm, logger, (PropertyCheckerCPA) cpa);
       }
 
-      if (useGMGenAlgorithm) {
+      if (useGraphGenAlgorithm) {
 //        if(!(cpa instanceof ASTCollectorCPA)) {
 //          throw new InvalidConfigurationException(
 //              "Graph Model Generator needs GMCPA as Top CPA");
