@@ -46,7 +46,7 @@ import org.sosy_lab.cpachecker.core.algorithm.RestartAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.RestartAlgorithmWithARGReplay;
 import org.sosy_lab.cpachecker.core.algorithm.RestartWithConditionsAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.bmc.BMCAlgorithm;
-import org.sosy_lab.cpachecker.core.algorithm.gmgen.GMGeneratorAlgorithm;
+import org.sosy_lab.cpachecker.core.algorithm.graphgen.GraphGeneratorAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.impact.ImpactAlgorithm;
 import org.sosy_lab.cpachecker.core.algorithm.pcc.AlgorithmWithPropertyCheck;
 import org.sosy_lab.cpachecker.core.algorithm.pcc.PartialARGsCombiner;
@@ -237,12 +237,12 @@ public class CoreComponentsFactory {
       }
 
       if (useGMGenAlgorithm) {
-//        if(!(cpa instanceof CFALabelsCPA)) {
+//        if(!(cpa instanceof ASTCollectorCPA)) {
 //          throw new InvalidConfigurationException(
 //              "Graph Model Generator needs GMCPA as Top CPA");
 //        }
         algorithm =
-            new GMGeneratorAlgorithm(algorithm, logger, cpa);
+            new GraphGeneratorAlgorithm(algorithm, logger, cpa);
       }
 
       if (useResultCheckAlgorithm) {

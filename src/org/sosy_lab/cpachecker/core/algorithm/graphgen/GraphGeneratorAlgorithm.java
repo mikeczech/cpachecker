@@ -21,7 +21,7 @@
  *  CPAchecker web page:
  *    http://cpachecker.sosy-lab.org
  */
-package org.sosy_lab.cpachecker.core.algorithm.gmgen;
+package org.sosy_lab.cpachecker.core.algorithm.graphgen;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -53,30 +53,27 @@ import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.ConfigurableProgramAnalysis;
 import org.sosy_lab.cpachecker.core.reachedset.ReachedSet;
 import org.sosy_lab.cpachecker.cpa.arg.ARGState;
-import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsCPA;
-import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsState;
-import org.sosy_lab.cpachecker.cpa.cfalabels.CFALabelsState.EdgeInfo;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdge;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMEdgeLabel;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.EdgeInfo;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdge;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdgeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
 import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
 import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.DefinitionPoint;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.ProgramDefinitionPoint;
-import org.sosy_lab.cpachecker.cpa.seplogic.interfaces.Handle;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
 
 /**
  * Created by zenscr on 26/11/15.
  */
-@Options(prefix = "gmgen")
-public class GMGeneratorAlgorithm implements Algorithm {
+@Options(prefix = "graphgen")
+public class GraphGeneratorAlgorithm implements Algorithm {
 
   private final LogManager logger;
 
@@ -86,28 +83,28 @@ public class GMGeneratorAlgorithm implements Algorithm {
   @FileOption(Type.OUTPUT_FILE)
   private Path gmOutputFile = Paths.get("output/gm.dot");
 
-  public GMGeneratorAlgorithm(Algorithm pAlgorithm, LogManager pLogger,
+  public GraphGeneratorAlgorithm(Algorithm pAlgorithm, LogManager pLogger,
       ConfigurableProgramAnalysis pCpa) {
     logger = pLogger;
     algorithm = pAlgorithm;
   }
 
-  private void pruneBlankNodes(DirectedGraph<GMNode, GMEdge> pGMGraph) {
-    Set<GMEdge> edgesToRemove = new HashSet<>();
-    Set<GMNode> nodesToRemove = new HashSet<>();
-    for(GMNode node : pGMGraph.vertexSet()) {
+  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGMGraph) {
+    Set<ASTEdge> edgesToRemove = new HashSet<>();
+    Set<ASTNode> nodesToRemove = new HashSet<>();
+    for(ASTNode node : pGMGraph.vertexSet()) {
       if(node.isBlank()) {
         assert pGMGraph.outDegreeOf(node) == 1;
-        for(GMEdge targetEdge : pGMGraph.outgoingEdgesOf(node)) {
-          GMNode target = targetEdge.getV2();
+        for(ASTEdge targetEdge : pGMGraph.outgoingEdgesOf(node)) {
+          ASTNode target = targetEdge.getTargetNode();
           edgesToRemove.add(targetEdge);
-          for(GMEdge sourceEdge : pGMGraph.incomingEdgesOf(node)) {
-            GMNode source = sourceEdge.getV1();
-            Set<GMEdgeLabel> labels = new HashSet<>();
-            labels.addAll(targetEdge.getGmEdgeLabels());
-            labels.addAll(sourceEdge.getGmEdgeLabels());
+          for(ASTEdge sourceEdge : pGMGraph.incomingEdgesOf(node)) {
+            ASTNode source = sourceEdge.getSourceNode();
+            Set<ASTEdgeLabel> labels = new HashSet<>();
+            labels.addAll(targetEdge.getAstEdgeLabels());
+            labels.addAll(sourceEdge.getAstEdgeLabels());
             pGMGraph.addEdge(source, target,
-                new GMEdge(source, target, new ArrayList<>(labels)));
+                new ASTEdge(source, target, new ArrayList<>(labels)));
             edgesToRemove.add(sourceEdge);
           }
         }
@@ -118,32 +115,32 @@ public class GMGeneratorAlgorithm implements Algorithm {
     pGMGraph.removeAllVertices(nodesToRemove);
   }
 
-  private DirectedGraph<GMNode, GMEdge> generateCFGFromStates(Collection<CFALabelsState> states) {
-    DirectedGraph<GMNode, GMEdge> result = new DefaultDirectedGraph<>(GMEdge.class);
-    Map<Integer, List<GMNode>> stateTable = new HashMap<>();
-    for(CFALabelsState s : states) {
+  private DirectedGraph<ASTNode, ASTEdge> generateCFGFromStates(Collection<ASTCollectorState> states) {
+    DirectedGraph<ASTNode, ASTEdge> result = new DefaultDirectedGraph<>(ASTEdge.class);
+    Map<Integer, List<ASTNode>> stateTable = new HashMap<>();
+    for(ASTCollectorState s : states) {
       if(s.isInit())
         continue;
       for(EdgeInfo e : s.getEdgeInfoSet()) {
         int source = e.getSource();
         if(!stateTable.containsKey(source))
-          stateTable.put(source, new ArrayList<GMNode>());
+          stateTable.put(source, new ArrayList<ASTNode>());
         stateTable.get(source).add(s.getTree().getRoot());
       }
       boolean modified = Graphs.addGraph(result, s.getTree().asGraph());
       assert modified;
     }
-    for(CFALabelsState s : states) {
+    for(ASTCollectorState s : states) {
       if(s.isInit())
         continue;
       for(EdgeInfo e : s.getEdgeInfoSet()) {
         int target = e.getTarget();
         if(stateTable.containsKey(target)) {
-          GMNode sourceRoot = s.getTree().getRoot();
-          for(GMNode targetRoot : stateTable.get(target)) {
-            GMEdge edge = new GMEdge(sourceRoot, targetRoot,
-                GMEdgeLabel.CONTROL_FLOW);
-            for(GMEdgeLabel l : e.getLabels())
+          ASTNode sourceRoot = s.getTree().getRoot();
+          for(ASTNode targetRoot : stateTable.get(target)) {
+            ASTEdge edge = new ASTEdge(sourceRoot, targetRoot,
+                ASTEdgeLabel.CONTROL_FLOW);
+            for(ASTEdgeLabel l : e.getLabels())
               edge.addLabel(l);
             result.addEdge(sourceRoot, targetRoot, edge);
           }
@@ -153,11 +150,11 @@ public class GMGeneratorAlgorithm implements Algorithm {
     return result;
   }
 
-  private void addDataDependenceEdges(Table<Integer, Integer, CFALabelsState> states,
-      DirectedGraph<GMNode, GMEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
+  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
+      DirectedGraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
     Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
-    for(CFALabelsState s : states.values()) {
-      GMNode targetRoot = s.getTree().getRoot();
+    for(ASTCollectorState s : states.values()) {
+      ASTNode targetRoot = s.getTree().getRoot();
       for(EdgeInfo e : s.getEdgeInfoSet()) {
         ReachingDefState reachDefState = reachDef.get(e.getSource());
         for(String var : s.getVariables()) {
@@ -174,9 +171,9 @@ public class GMGeneratorAlgorithm implements Algorithm {
           for(DefinitionPoint p : defPoints) {
             if(p instanceof ProgramDefinitionPoint) {
               ProgramDefinitionPoint pdp = (ProgramDefinitionPoint)p;
-              GMNode sourceRoot = states.get(pdp.getDefinitionEntryLocation().getNodeNumber(),
+              ASTNode sourceRoot = states.get(pdp.getDefinitionEntryLocation().getNodeNumber(),
                   pdp.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
-              pGM.addEdge(sourceRoot, targetRoot, new GMEdge(sourceRoot, targetRoot, GMEdgeLabel.DATA_DEPENDENCE));
+              pGM.addEdge(sourceRoot, targetRoot, new ASTEdge(sourceRoot, targetRoot, ASTEdgeLabel.DATA_DEPENDENCE));
             }
           }
         }
@@ -225,14 +222,14 @@ public class GMGeneratorAlgorithm implements Algorithm {
     AlgorithmStatus result = algorithm.run(reachedSet);
     logger.log(Level.INFO, "GM generator algorithm started.");
 
-    Table<Integer, Integer, CFALabelsState> astLocStates = HashBasedTable.create();
+    Table<Integer, Integer, ASTCollectorState> astLocStates = HashBasedTable.create();
     Map<Integer, Set<AbstractState>> statesPerNode = new HashMap<>();
     for(AbstractState absState : reachedSet.asCollection()) {
       ARGState state = (ARGState)absState;
       CompositeState compState = (CompositeState)state.getWrappedState();
       for(AbstractState child : compState.getWrappedStates()) {
-        if(child instanceof CFALabelsState) {
-          CFALabelsState gmState = (CFALabelsState)child;
+        if(child instanceof ASTCollectorState) {
+          ASTCollectorState gmState = (ASTCollectorState)child;
           for(EdgeInfo e : gmState.getEdgeInfoSet())
             astLocStates.put(e.getSource(), e.getTarget(), gmState);
         }
@@ -245,21 +242,21 @@ public class GMGeneratorAlgorithm implements Algorithm {
         }
       }
     }
-    DirectedGraph<GMNode, GMEdge> gm = generateCFGFromStates(astLocStates.values());
+    DirectedGraph<ASTNode, ASTEdge> gm = generateCFGFromStates(astLocStates.values());
     addDataDependenceEdges(astLocStates, gm, statesPerNode);
     pruneBlankNodes(gm);
 
-    DOTExporter<GMNode, GMEdge> dotExp = new DOTExporter<>(
-        new IntegerNameProvider<GMNode>(),
-        new VertexNameProvider<GMNode>() {
+    DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
+        new IntegerNameProvider<ASTNode>(),
+        new VertexNameProvider<ASTNode>() {
           @Override
-          public String getVertexName(GMNode o) {
+          public String getVertexName(ASTNode o) {
             return o.toString();
           }
         },
-        new EdgeNameProvider<GMEdge>() {
+        new EdgeNameProvider<ASTEdge>() {
           @Override
-          public String getEdgeName(GMEdge o) {
+          public String getEdgeName(ASTEdge o) {
             return o.toString();
           }
         });
