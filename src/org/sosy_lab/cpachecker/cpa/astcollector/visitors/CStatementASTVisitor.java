@@ -23,6 +23,7 @@
  */
 package org.sosy_lab.cpachecker.cpa.astcollector.visitors;
 
+import org.eclipse.jdt.core.dom.AST;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionStatement;
@@ -30,10 +31,13 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionCallStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CStatementVisitor;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorUtils;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
+
+import com.google.common.base.Optional;
 
 /**
  * Created by zenscr on 01/10/15.
@@ -71,8 +75,14 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
   @Override public ASTree visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode(
-        ASTNodeLabel.FUNC_CALL_ASSIGN));
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(
+        pIastFunctionCallAssignmentStatement.getFunctionCallExpression()
+            .getDeclaration().getName());
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    ASTNode root = tree.getRoot();
+    if(specialLabel.isPresent())
+      root.addLabel(specialLabel.get());
+
     ASTree leftTree = pIastFunctionCallAssignmentStatement.getLeftHandSide().accept(
         new CExpressionASTVisitor(this.cfaEdge));
     tree.addTree(leftTree);
@@ -91,8 +101,13 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
   @Override
   public ASTree visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode(
-        ASTNodeLabel.FUNC_CALL));
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(
+        pIastFunctionCallStatement.getFunctionCallExpression()
+            .getDeclaration().getName());
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    ASTNode root = tree.getRoot();
+    if(specialLabel.isPresent())
+      root.addLabel(specialLabel.get());
     // add labels for arguments as well
     if(pIastFunctionCallStatement.getFunctionCallExpression().getParameterExpressions().size() > 0) {
       ASTree paramsTree = new ASTree(new ASTNode(

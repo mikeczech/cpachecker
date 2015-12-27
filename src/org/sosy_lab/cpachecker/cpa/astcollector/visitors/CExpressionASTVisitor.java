@@ -69,58 +69,58 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
   public ASTree visit(CBinaryExpression pIastBinaryExpression)
       throws CPATransferException {
 
-    ASTree tree = new ASTree(new ASTNode());
-    ASTNode root = tree.getRoot();
-
+    ASTree tree;
     switch(pIastBinaryExpression.getOperator()) {
       case MULTIPLY:
-        root.addLabel(ASTNodeLabel.MULTIPLY);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.MULTIPLY));
         break;
       case DIVIDE:
-        root.addLabel(ASTNodeLabel.DIVIDE);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.DIVIDE));
         break;
       case PLUS:
-        root.addLabel(ASTNodeLabel.PLUS);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.PLUS));
         break;
       case MINUS:
-        root.addLabel(ASTNodeLabel.MINUS);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.MINUS));
         break;
       case EQUALS:
-        root.addLabel(ASTNodeLabel.EQUALS);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.EQUALS));
         break;
       case NOT_EQUALS:
-        root.addLabel(ASTNodeLabel.NOT_EQUALS);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.NOT_EQUALS));
         break;
       case LESS_THAN:
-        root.addLabel(ASTNodeLabel.LESS_THAN);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.LESS_THAN));
         break;
       case GREATER_THAN:
-        root.addLabel(ASTNodeLabel.GREATER_THAN);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.GREATER_THAN));
         break;
       case LESS_EQUAL:
-        root.addLabel(ASTNodeLabel.LESS_EQUAL);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.LESS_EQUAL));
         break;
       case GREATER_EQUAL:
-        root.addLabel(ASTNodeLabel.GREATER_EQUAL);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.GREATER_EQUAL));
         break;
       case BINARY_AND:
-        root.addLabel(ASTNodeLabel.BINARY_AND);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.BINARY_AND));
         break;
       case BINARY_XOR:
-        root.addLabel(ASTNodeLabel.BINARY_XOR);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.BINARY_XOR));
         break;
       case BINARY_OR:
-        root.addLabel(ASTNodeLabel.BINARY_OR);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.BINARY_OR));
         break;
       case SHIFT_LEFT:
-        root.addLabel(ASTNodeLabel.SHIFT_LEFT);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.SHIFT_LEFT));
         break;
       case SHIFT_RIGHT:
-        root.addLabel(ASTNodeLabel.SHIFT_RIGHT);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.SHIFT_RIGHT));
         break;
       case MODULO:
-        root.addLabel(ASTNodeLabel.MODULO);
+        tree = new ASTree(new ASTNode(ASTNodeLabel.MODULO));
         break;
+      default:
+        throw new UnsupportedCCodeException("Unknown operator", this.cfaEdge);
     }
     ASTree leftExpTree = pIastBinaryExpression.getOperand1().accept(this);
     ASTree rightExpTree = pIastBinaryExpression.getOperand2().accept(this);
@@ -189,23 +189,25 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
   @Override
   public ASTree visit(CUnaryExpression pIastUnaryExpression)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode());
-    ASTNode root = tree.getRoot();
+    ASTree tree;
     switch(pIastUnaryExpression.getOperator()) {
       case MINUS:
-        root.addLabel(ASTNodeLabel.MINUS);
+        tree = new ASTree((new ASTNode(ASTNodeLabel.MINUS)));
         break;
       case AMPER:
-        root.addLabel(ASTNodeLabel.AMPER);
+        tree = new ASTree((new ASTNode(ASTNodeLabel.AMPER)));
         break;
       case TILDE:
-        root.addLabel(ASTNodeLabel.TILDE);
+        tree = new ASTree((new ASTNode(ASTNodeLabel.TILDE)));
         break;
       case SIZEOF:
-        root.addLabel(ASTNodeLabel.SIZEOF);
+        tree = new ASTree((new ASTNode(ASTNodeLabel.SIZEOF)));
         break;
       case ALIGNOF:
-        root.addLabel(ASTNodeLabel.ALIGNOF);
+        tree = new ASTree((new ASTNode(ASTNodeLabel.ALIGNOF)));
+        break;
+      default:
+        throw new UnsupportedCCodeException("Unknown operator", this.cfaEdge);
     }
     ASTree operandTree = pIastUnaryExpression.getOperand().accept(this);
     tree.addTree(operandTree);
@@ -243,12 +245,11 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
   @Override
   public ASTree visit(CFieldReference pIastFieldReference)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode());
-    ASTNode root = tree.getRoot();
+    ASTree tree;
     if(pIastFieldReference.isPointerDereference())
-      root.addLabel(ASTNodeLabel.FIELD_POINTER_DEREF);
+      tree = new ASTree(new ASTNode(ASTNodeLabel.FIELD_POINTER_DEREF));
     else
-      root.addLabel(ASTNodeLabel.FIELD_REF);
+      tree = new ASTree(new ASTNode(ASTNodeLabel.FIELD_REF));
     ASTree ownerTree = pIastFieldReference.getFieldOwner().accept(this);
     tree.addTree(ownerTree);
     return tree;

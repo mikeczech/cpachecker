@@ -104,11 +104,9 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
   protected ASTCollectorState handleFunctionCallEdge(CFunctionCallEdge cfaEdge,
       List<CExpression> arguments, List<CParameterDeclaration> parameters,
       String calledFunctionName) throws CPATransferException {
-    ASTree
-        tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
-    ASTNode root = tree.getRoot();
-
     Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(calledFunctionName);
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
       root.addLabel(specialLabel.get());
 

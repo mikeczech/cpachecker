@@ -59,10 +59,10 @@ public class CSimpleDeclASTVisitor
   @Override
   public ASTree visit(CFunctionDeclaration pDecl)
       throws CPATransferException {
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(pDecl.getName());
+
     ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNCTION_DECL));
     ASTNode root = tree.getRoot();
-
-    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(pDecl.getName());
     if(specialLabel.isPresent())
       root.addLabel(specialLabel.get());
 
