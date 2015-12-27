@@ -58,6 +58,7 @@ import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CVariablesCollectingVis
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCodeException;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -70,22 +71,6 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
     logger = pLogger;
   }
 
-  static final Map<String, ASTNodeLabel> SPECIAL_FUNCTIONS;
-
-  static {
-    Builder<String, ASTNodeLabel> builder = ImmutableMap.builder();
-    builder.put("pthread_create", ASTNodeLabel.PTHREAD);
-    builder.put("pthread_exit", ASTNodeLabel.PTHREAD);
-    builder.put("__VERIFIER_error", ASTNodeLabel.VERIFIER_ERROR);
-    builder.put("__VERIFIER_assert", ASTNodeLabel.VERIFIER_ASSERT);
-    builder.put("__VERIFIER_assume", ASTNodeLabel.VERIFIER_ASSUME);
-    builder.put("__VERIFIER_atomic_begin", ASTNodeLabel.VERIFIER_ATOMIC_BEGIN);
-    builder.put("__VERIFIER_atomic_end", ASTNodeLabel.VERIFIER_ATOMIC_END);
-    builder.put("__VERIFIER_nondet", ASTNodeLabel.INPUT);
-    builder.put("malloc", ASTNodeLabel.MALLOC);
-    builder.put("free", ASTNodeLabel.FREE);
-    SPECIAL_FUNCTIONS = builder.build();
-  }
 
   public static ASTNodeLabel extractControlLabel(CFAEdge pCFAEdge) {
     if(pCFAEdge.getPredecessor().isLoopStart()) {
@@ -122,10 +107,11 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
     ASTree
         tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
     ASTNode root = tree.getRoot();
-    for(String key : SPECIAL_FUNCTIONS.keySet()) {
-      if(calledFunctionName.startsWith(key))
-        root.addLabel(SPECIAL_FUNCTIONS.get(key));
-    }
+
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(calledFunctionName);
+    if(specialLabel.isPresent())
+      root.addLabel(specialLabel.get());
+
     if(arguments.size() > 0) {
       ASTree
           argsTree = new ASTree(new ASTNode(ASTNodeLabel.ARGUMENTS));

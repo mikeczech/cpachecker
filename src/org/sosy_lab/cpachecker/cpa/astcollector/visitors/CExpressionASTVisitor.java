@@ -43,12 +43,14 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CStringLiteralExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CTypeIdExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CUnaryExpression;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorUtils;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -61,24 +63,6 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
 
   public CExpressionASTVisitor(CFAEdge cfaEdge) {
     this.cfaEdge = cfaEdge;
-  }
-
-  // TODO put this in one file
-  static final Map<String, ASTNodeLabel> SPECIAL_FUNCTIONS;
-
-  static {
-    Builder<String, ASTNodeLabel> builder = ImmutableMap.builder();
-    builder.put("pthread_create", ASTNodeLabel.PTHREAD);
-    builder.put("pthread_exit", ASTNodeLabel.PTHREAD);
-    builder.put("__VERIFIER_error", ASTNodeLabel.VERIFIER_ERROR);
-    builder.put("__VERIFIER_assert", ASTNodeLabel.VERIFIER_ASSERT);
-    builder.put("__VERIFIER_assume", ASTNodeLabel.VERIFIER_ASSUME);
-    builder.put("__VERIFIER_atomic_begin", ASTNodeLabel.VERIFIER_ATOMIC_BEGIN);
-    builder.put("__VERIFIER_atomic_end", ASTNodeLabel.VERIFIER_ATOMIC_END);
-    builder.put("__VERIFIER_nondet", ASTNodeLabel.INPUT);
-    builder.put("malloc", ASTNodeLabel.MALLOC);
-    builder.put("free", ASTNodeLabel.FREE);
-    SPECIAL_FUNCTIONS = builder.build();
   }
 
   @Override
@@ -273,13 +257,9 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
   @Override
   public ASTree visit(CIdExpression pIastIdExpression)
       throws CPATransferException {
-    if(SPECIAL_FUNCTIONS.containsKey(pIastIdExpression.getName())) {
-      return new ASTree(new ASTNode(SPECIAL_FUNCTIONS.get(pIastIdExpression.getName())));
-    }
-    for(String key : SPECIAL_FUNCTIONS.keySet()) {
-      if(pIastIdExpression.getName().startsWith(key))
-        return new ASTree(new ASTNode(SPECIAL_FUNCTIONS.get(key)));
-    }
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(pIastIdExpression.getName());
+    if(specialLabel.isPresent())
+       return new ASTree(new ASTNode(specialLabel.get()));
     return new ASTree(new ASTNode(
         ASTNodeLabel.VARIABLE_ID));
   }
