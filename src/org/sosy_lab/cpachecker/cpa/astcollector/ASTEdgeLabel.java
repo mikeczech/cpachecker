@@ -30,6 +30,4 @@ public enum ASTEdgeLabel implements Serializable {
   DATA_DEPENDENCE,
   CONTROL_DEPENDENCE,
   CONTROL_FLOW,
-  ASSUME_TRUE,
-  ASSUME_FALSE
 }

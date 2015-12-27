@@ -41,47 +41,28 @@ import org.jgrapht.ext.DOTExporter;
 public class ASTCollectorState
     implements Serializable, AbstractState, Graphable {
 
-  public class EdgeInfo {
-    private int source;
-    private int target;
-    private Set<ASTEdgeLabel> labels = new HashSet<>();
-
-    public EdgeInfo(int pSource, int pTarget) {
-      source = pSource;
-      target = pTarget;
-    }
-
-    public Set<ASTEdgeLabel> getLabels() {
-      return labels;
-    }
-
-    public void addLabel(ASTEdgeLabel pLabel) {
-      this.labels.add(pLabel);
-    }
-
-    public int getTarget() {
-      return target;
-    }
-
-    public int getSource() {
-      return source;
-    }
+  public class CFAEdgeInfo {
+    private final int source;
+    private final int target;
 
     @Override
-    public boolean equals(Object o) {
-      if (this == o) {
+    public boolean equals(Object pO) {
+      if (this == pO) {
         return true;
       }
-      if (o == null || getClass() != o.getClass()) {
+      if (pO == null || getClass() != pO.getClass()) {
         return false;
       }
 
-      EdgeInfo edgeInfo = (EdgeInfo)o;
+      CFAEdgeInfo that = (CFAEdgeInfo)pO;
 
-      if (source != edgeInfo.source) {
+      if (source != that.source) {
         return false;
       }
-      if (target != edgeInfo.target) {
+      if (target != that.target) {
+        return false;
+      }
+      if (assumption != that.assumption) {
         return false;
       }
 
@@ -92,33 +73,63 @@ public class ASTCollectorState
     public int hashCode() {
       int result = source;
       result = 31 * result + target;
+      result = 31 * result + (assumption ? 1 : 0);
       return result;
     }
+
+    private final boolean assumption;
+
+    public CFAEdgeInfo(int pSource, int pTarget, boolean pAssumption) {
+      source = pSource;
+      target = pTarget;
+      assumption = pAssumption;
+    }
+
+    public int getTarget() {
+      return target;
+    }
+
+    public int getSource() {
+      return source;
+    }
+
+    public boolean getAssumption() {
+      return assumption;
+    }
+
   }
 
   private ASTree tree;
 
   private Set<String> variables = new HashSet<>();
 
-  private Set<EdgeInfo> edgeInfoSet= new HashSet<>();
-
-  private EdgeInfo lastAddedEdgeInfo = null;
+  private Set<CFAEdgeInfo> cfaEdgeInfoSet = new HashSet<>();
 
   public final static ASTCollectorState TOP = new ASTCollectorState();
 
   private ASTCollectorState() {
     this.tree = new ASTree();
   }
+
   public ASTCollectorState(CFAEdge pEdge, ASTree pTree) {
     this(pEdge, pTree, new HashSet<String>());
   }
 
   public ASTCollectorState(CFAEdge pEdge, ASTree pTree, Set<String> pVars) {
-    EdgeInfo edgeInfo = new EdgeInfo(
-        pEdge.getPredecessor().getNodeNumber(),
-        pEdge.getSuccessor().getNodeNumber());
-    this.lastAddedEdgeInfo = edgeInfo;
-    this.edgeInfoSet.add(edgeInfo);
+    addEdge(pEdge);
+    this.tree = pTree;
+    this.variables.addAll(pVars);
+  }
+
+  public ASTCollectorState(CFAEdge pEdge, ASTree pTree, Set<String> pVars, boolean assumption) {
+    addEdge(pEdge, assumption);
+    for(int i = 0; i < pEdge.getPredecessor().getNumLeavingEdges(); i++) {
+      CFAEdge altEdge = pEdge.getPredecessor().getLeavingEdge(i);
+      if(altEdge != pEdge) {
+        addEdge(altEdge, !assumption);
+      }
+    }
+    assert cfaEdgeInfoSet.size() == 2;
     this.tree = pTree;
     this.variables.addAll(pVars);
   }
@@ -127,21 +138,19 @@ public class ASTCollectorState
     return variables;
   }
 
-  public void addEdge(CFAEdge pCFAEdge) {
-    EdgeInfo edgeInfo = new EdgeInfo(
+  private void addEdge(CFAEdge pCFAEdge, boolean assumption) {
+    CFAEdgeInfo cfaEdgeInfo = new CFAEdgeInfo(
         pCFAEdge.getPredecessor().getNodeNumber(),
-        pCFAEdge.getSuccessor().getNodeNumber());
-    this.edgeInfoSet.add(edgeInfo);
-    this.lastAddedEdgeInfo = edgeInfo;
+        pCFAEdge.getSuccessor().getNodeNumber(), assumption);
+    this.cfaEdgeInfoSet.add(cfaEdgeInfo);
   }
 
-  public EdgeInfo getLastAddedEdgeInfo() {
-    return lastAddedEdgeInfo;
+  private void addEdge(CFAEdge pCFAEdge) {
+    addEdge(pCFAEdge, true);
   }
 
-
-  public Set<EdgeInfo> getEdgeInfoSet() {
-    return edgeInfoSet;
+  public Set<CFAEdgeInfo> getCfaEdgeInfoSet() {
+    return cfaEdgeInfoSet;
   }
 
   public ASTree getTree() {
@@ -149,7 +158,7 @@ public class ASTCollectorState
   }
 
   public boolean isInit() {
-    return this.edgeInfoSet.isEmpty();
+    return this.cfaEdgeInfoSet.isEmpty();
   }
 
   @Override
@@ -173,20 +182,18 @@ public class ASTCollectorState
     return strWriter.toString();
   }
 
-
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
+  public boolean equals(Object pO) {
+    if (this == pO) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (pO == null || getClass() != pO.getClass()) {
       return false;
     }
 
-    ASTCollectorState that = (ASTCollectorState)o;
+    ASTCollectorState that = (ASTCollectorState)pO;
 
-    if (edgeInfoSet != null ? !edgeInfoSet.equals(that.edgeInfoSet)
-        : that.edgeInfoSet != null) {
+    if (!cfaEdgeInfoSet.equals(that.cfaEdgeInfoSet)) {
       return false;
     }
 
@@ -195,7 +202,7 @@ public class ASTCollectorState
 
   @Override
   public int hashCode() {
-    return edgeInfoSet != null ? edgeInfoSet.hashCode() : 0;
+    return cfaEdgeInfoSet.hashCode();
   }
 
   @Override

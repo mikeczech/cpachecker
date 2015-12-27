@@ -33,26 +33,22 @@ import org.jgrapht.graph.DefaultEdge;
  */
 public class ASTEdge extends DefaultEdge {
 
-  private ASTNode sourceNode;
+  private final ASTNode sourceNode;
 
-  private ASTNode targetNode;
+  private final ASTNode targetNode;
 
-  private List<ASTEdgeLabel> astEdgeLabels = new ArrayList<>();
+  private final ASTEdgeLabel astEdgeLabel;
 
-  public ASTEdge(ASTNode pSourceNode, ASTNode pTargetNode, List<ASTEdgeLabel> pEdgeLabels) {
-    this.sourceNode = pSourceNode;
-    this.targetNode = pTargetNode;
-    this.astEdgeLabels.addAll(pEdgeLabels);
-  }
+  private boolean truthValue = true;
 
   public ASTEdge(ASTNode pSourceNode, ASTNode pTargetNode, ASTEdgeLabel pEdgeLabel) {
     this.sourceNode = pSourceNode;
     this.targetNode = pTargetNode;
-    this.astEdgeLabels.add(pEdgeLabel);
+    this.astEdgeLabel = pEdgeLabel;
   }
 
-  public List<ASTEdgeLabel> getAstEdgeLabels() {
-    return astEdgeLabels;
+  public ASTEdgeLabel getAstEdgeLabel() {
+    return astEdgeLabel;
   }
 
   public ASTNode getSourceNode() {
@@ -63,16 +59,16 @@ public class ASTEdge extends DefaultEdge {
     return targetNode;
   }
 
-  public void addLabel(ASTEdgeLabel pLabel) {
-    astEdgeLabels.add(pLabel);
+  public boolean getTruthValue() {
+    return truthValue;
+  }
+
+  public void setTruthValue(boolean pTruthValue) {
+    truthValue = pTruthValue;
   }
 
   public String toString() {
-    StringBuilder labelList = new StringBuilder();
-    for (ASTEdgeLabel label : astEdgeLabels) {
-      labelList.append(label.name() + ",");
-    }
-    return new String(labelList.deleteCharAt(labelList.length() - 1));
+    return astEdgeLabel.name() + " (" + (truthValue ? "T" : "F") + ")";
   }
 
 }

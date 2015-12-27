@@ -49,7 +49,7 @@ import org.sosy_lab.cpachecker.core.defaults.ForwardingTransferRelation;
 import org.sosy_lab.cpachecker.core.defaults.SingletonPrecision;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Precision;
-import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.EdgeInfo;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.CFAEdgeInfo;
 import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CExpressionASTVisitor;
 import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CSimpleDeclASTVisitor;
 import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CStatementASTVisitor;
@@ -65,8 +65,6 @@ import com.google.common.collect.ImmutableMap.Builder;
 public class ASTCollectorTransferRelation extends ForwardingTransferRelation<ASTCollectorState, ASTCollectorState, SingletonPrecision> {
 
   private LogManager logger;
-
-  private Map<Integer, ASTCollectorState> controlLocStateCache = new HashMap<>();
 
   public ASTCollectorTransferRelation(LogManager pLogger) {
     logger = pLogger;
@@ -106,26 +104,15 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
   protected ASTCollectorState handleAssumption(CAssumeEdge cfaEdge,
       CExpression expression, boolean truthAssumption)
       throws CPATransferException {
-    int predecessor = cfaEdge.getPredecessor().getNodeNumber();
-    ASTCollectorState state;
-    if(!controlLocStateCache.containsKey(predecessor)) {
-      ASTree
-          tree = new ASTree(new ASTNode(extractControlLabel(cfaEdge)));
+    if(truthAssumption) {
+      ASTree tree = new ASTree(new ASTNode(extractControlLabel(cfaEdge)));
       ASTree assumeExpTree = expression.accept(new CExpressionASTVisitor(cfaEdge));
       tree.addTree(assumeExpTree);
-      state = new ASTCollectorState(cfaEdge, tree, expression.accept(
-          new CVariablesCollectingVisitor(cfaEdge.getPredecessor())));
-      controlLocStateCache.put(predecessor, state);
-    } else {
-      state = controlLocStateCache.get(predecessor);
-      state.addEdge(cfaEdge);
+      ASTCollectorState state = new ASTCollectorState(cfaEdge, tree, expression.accept(
+          new CVariablesCollectingVisitor(cfaEdge.getPredecessor())), truthAssumption);
+      return state;
     }
-    EdgeInfo edgeInfo = state.getLastAddedEdgeInfo();
-    if(truthAssumption)
-      edgeInfo.addLabel(ASTEdgeLabel.ASSUME_TRUE);
-    else
-      edgeInfo.addLabel(ASTEdgeLabel.ASSUME_FALSE);
-    return state;
+    return this.getState();
   }
 
   @Override

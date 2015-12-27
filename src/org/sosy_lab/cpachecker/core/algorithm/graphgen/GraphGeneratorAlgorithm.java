@@ -38,9 +38,8 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graphs;
 import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
-import org.jgrapht.ext.IntegerNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
-import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DirectedMultigraph;
 import org.sosy_lab.common.configuration.FileOption;
 import org.sosy_lab.common.configuration.FileOption.Type;
 import org.sosy_lab.common.configuration.Options;
@@ -54,10 +53,11 @@ import org.sosy_lab.cpachecker.core.interfaces.ConfigurableProgramAnalysis;
 import org.sosy_lab.cpachecker.core.reachedset.ReachedSet;
 import org.sosy_lab.cpachecker.cpa.arg.ARGState;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState;
-import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.EdgeInfo;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.CFAEdgeInfo;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdge;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdgeLabel;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
 import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
@@ -89,61 +89,89 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     algorithm = pAlgorithm;
   }
 
-  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGMGraph) {
-    Set<ASTEdge> edgesToRemove = new HashSet<>();
-    Set<ASTNode> nodesToRemove = new HashSet<>();
-    for(ASTNode node : pGMGraph.vertexSet()) {
-      if(node.isBlank()) {
-        assert pGMGraph.outDegreeOf(node) == 1;
-        for(ASTEdge targetEdge : pGMGraph.outgoingEdgesOf(node)) {
-          ASTNode target = targetEdge.getTargetNode();
-          edgesToRemove.add(targetEdge);
-          for(ASTEdge sourceEdge : pGMGraph.incomingEdgesOf(node)) {
-            ASTNode source = sourceEdge.getSourceNode();
-            Set<ASTEdgeLabel> labels = new HashSet<>();
-            labels.addAll(targetEdge.getAstEdgeLabels());
-            labels.addAll(sourceEdge.getAstEdgeLabels());
-            pGMGraph.addEdge(source, target,
-                new ASTEdge(source, target, new ArrayList<>(labels)));
-            edgesToRemove.add(sourceEdge);
-          }
-        }
-        nodesToRemove.add(node);
-      }
-    }
-    pGMGraph.removeAllEdges(edgesToRemove);
-    pGMGraph.removeAllVertices(nodesToRemove);
+  // Initializes depth attribute of ASTNode objects
+  private void initASTNodeDepth(ASTree pTree) {
+    ASTNode root = pTree.getRoot();
+    root.setDepth(0);
+    DirectedGraph<ASTNode, ASTEdge> graph = pTree.asGraph();
+    for(ASTEdge e : graph.incomingEdgesOf(root))
+      initASTNodeDepth(graph, e);
   }
 
-  private DirectedGraph<ASTNode, ASTEdge> generateCFGFromStates(Collection<ASTCollectorState> states) {
-    DirectedGraph<ASTNode, ASTEdge> result = new DefaultDirectedGraph<>(ASTEdge.class);
-    Map<Integer, List<ASTNode>> stateTable = new HashMap<>();
+  private void initASTNodeDepth(DirectedGraph<ASTNode, ASTEdge> pTreeGraph, ASTEdge edge) {
+    ASTNode sourceNode = edge.getSourceNode();
+    ASTNode targetNode = edge.getTargetNode();
+    sourceNode.setDepth(targetNode.getDepth() + 1);
+    for(ASTEdge e : pTreeGraph.incomingEdgesOf(sourceNode))
+      initASTNodeDepth(pTreeGraph, e);
+  }
+
+//  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGMGraph) {
+//
+//    Set<ASTEdge> edgesToRemove = new HashSet<>();
+//    Set<ASTNode> nodesToRemove = new HashSet<>();
+//
+//    for(ASTNode node : pGMGraph.vertexSet()) {
+//      if(node.isBlank()) {
+//
+//        assert pGMGraph.outDegreeOf(node) == 1;
+//
+//        for(ASTEdge e : pGMGraph.outgoingEdgesOf(node)) {
+//          ASTNode target = e.getTargetNode();
+//          edgesToRemove.add(e);
+//          for(ASTEdge sourceEdge : pGMGraph.incomingEdgesOf(node)) {
+//            ASTNode source = sourceEdge.getSourceNode();
+//            Set<ASTEdgeLabel> labels = new HashSet<>();
+//            labels.addAll(e.getAstEdgeLabels());
+//            labels.addAll(sourceEdge.getAstEdgeLabels());
+//            pGMGraph.addEdge(source, target,
+//                new ASTEdge(source, target, new ArrayList<>(labels)));
+//            edgesToRemove.add(sourceEdge);
+//          }
+//        }
+//        nodesToRemove.add(node);
+//
+//      }
+//    }
+//    pGMGraph.removeAllEdges(edgesToRemove);
+//    pGMGraph.removeAllVertices(nodesToRemove);
+//  }
+
+  private DirectedMultigraph<ASTNode, ASTEdge> generateCFGFromStates(Set<ASTCollectorState> states) {
+    DirectedMultigraph<ASTNode, ASTEdge> result = new DirectedMultigraph<>(ASTEdge.class);
+    Map<Integer, ASTNode> sourceNodeToRoot = new HashMap<>();
+    // Map every CFAEdge (identified by its source node) to the root node of its AST
     for(ASTCollectorState s : states) {
+
       if(s.isInit())
         continue;
-      for(EdgeInfo e : s.getEdgeInfoSet()) {
+
+      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
         int source = e.getSource();
-        if(!stateTable.containsKey(source))
-          stateTable.put(source, new ArrayList<ASTNode>());
-        stateTable.get(source).add(s.getTree().getRoot());
+        if(!sourceNodeToRoot.containsKey(source))
+          sourceNodeToRoot.put(source, s.getTree().getRoot());
       }
+
+      // initialize depth attribute of nodes Todo find a better place to do this
+      initASTNodeDepth(s.getTree());
+
       boolean modified = Graphs.addGraph(result, s.getTree().asGraph());
       assert modified;
     }
     for(ASTCollectorState s : states) {
       if(s.isInit())
         continue;
-      for(EdgeInfo e : s.getEdgeInfoSet()) {
+      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
         int target = e.getTarget();
-        if(stateTable.containsKey(target)) {
+        if(sourceNodeToRoot.containsKey(target)) {
           ASTNode sourceRoot = s.getTree().getRoot();
-          for(ASTNode targetRoot : stateTable.get(target)) {
-            ASTEdge edge = new ASTEdge(sourceRoot, targetRoot,
-                ASTEdgeLabel.CONTROL_FLOW);
-            for(ASTEdgeLabel l : e.getLabels())
-              edge.addLabel(l);
-            result.addEdge(sourceRoot, targetRoot, edge);
-          }
+          ASTNode targetRoot = sourceNodeToRoot.get(target);
+          ASTEdge edge = new ASTEdge(sourceRoot, targetRoot,
+              ASTEdgeLabel.CONTROL_FLOW);
+          edge.setTruthValue(e.getAssumption());
+          result.addEdge(sourceRoot, targetRoot, edge);
+        } else {
+          // do nothing
         }
       }
     }
@@ -151,11 +179,11 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   }
 
   private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
-      DirectedGraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
+      DirectedMultigraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
     Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
     for(ASTCollectorState s : states.values()) {
       ASTNode targetRoot = s.getTree().getRoot();
-      for(EdgeInfo e : s.getEdgeInfoSet()) {
+      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
         ReachingDefState reachDefState = reachDef.get(e.getSource());
         for(String var : s.getVariables()) {
 
@@ -222,29 +250,39 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     AlgorithmStatus result = algorithm.run(reachedSet);
     logger.log(Level.INFO, "GM generator algorithm started.");
 
-    Table<Integer, Integer, ASTCollectorState> astLocStates = HashBasedTable.create();
-    Map<Integer, Set<AbstractState>> statesPerNode = new HashMap<>();
+    // Fill data structures
+    Set<ASTCollectorState> states = new HashSet<>();
+    Table<Integer, Integer, ASTCollectorState> edgeToState = HashBasedTable.create();
+    Map<Integer, Set<AbstractState>> locToAbstractState = new HashMap<>();
+
     for(AbstractState absState : reachedSet.asCollection()) {
+
       ARGState state = (ARGState)absState;
       CompositeState compState = (CompositeState)state.getWrappedState();
       for(AbstractState child : compState.getWrappedStates()) {
+
         if(child instanceof ASTCollectorState) {
           ASTCollectorState gmState = (ASTCollectorState)child;
-          for(EdgeInfo e : gmState.getEdgeInfoSet())
-            astLocStates.put(e.getSource(), e.getTarget(), gmState);
+          for(CFAEdgeInfo e : gmState.getCfaEdgeInfoSet())
+            edgeToState.put(e.getSource(), e.getTarget(), gmState);
+          states.add(gmState);
         }
+
         if(child instanceof LocationState) {
           LocationState locState = (LocationState)child;
           int nodeNum = locState.getLocationNode().getNodeNumber();
-          if(!statesPerNode.containsKey(nodeNum))
-            statesPerNode.put(nodeNum, new HashSet<AbstractState>());
-          statesPerNode.get(nodeNum).add(absState);
+          if(!locToAbstractState.containsKey(nodeNum))
+            locToAbstractState.put(nodeNum, new HashSet<AbstractState>());
+          locToAbstractState.get(nodeNum).add(absState);
         }
+
       }
     }
-    DirectedGraph<ASTNode, ASTEdge> gm = generateCFGFromStates(astLocStates.values());
-    addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    pruneBlankNodes(gm);
+
+    // Create graph representation
+    DirectedMultigraph<ASTNode, ASTEdge> gm = generateCFGFromStates(states);
+    //addDataDependenceEdges(astLocStates, gm, statesPerNode);
+    //pruneBlankNodes(gm);
 
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
         new VertexNameProvider<ASTNode>() {
@@ -257,6 +295,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           @Override
           public String getVertexName(ASTNode o) {
             return o.toString();
+            //return String.valueOf(o.getDepth());
           }
         },
         new EdgeNameProvider<ASTEdge>() {

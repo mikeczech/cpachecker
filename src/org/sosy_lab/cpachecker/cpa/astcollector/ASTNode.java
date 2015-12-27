@@ -35,6 +35,8 @@ public class ASTNode {
 
   private final int id;
 
+  private int depth;
+
   private List<ASTNodeLabel> labels = new ArrayList<>();
 
   public ASTNode(ASTNodeLabel pLabel) {
@@ -45,6 +47,18 @@ public class ASTNode {
   public ASTNode() {
     id = idCounter;
     idCounter++;
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public int getDepth() {
+    return depth;
+  }
+
+  public void setDepth(int pDepth) {
+    depth = pDepth;
   }
 
   public boolean isBlank() {
@@ -67,7 +81,7 @@ public class ASTNode {
   public String toString() {
     StringBuilder labelList = new StringBuilder();
     for (ASTNodeLabel label : labels) {
-      labelList.append(label.name() + ",");
+      labelList.append(label.name() + "_");
     }
     return new String(labelList.deleteCharAt(labelList.length() - 1));
   }
