@@ -83,7 +83,7 @@ public class ASTNode {
     for (ASTNodeLabel label : labels) {
       labelList.append(label.name() + "_");
     }
-    return new String(labelList.deleteCharAt(labelList.length() - 1));
+    return new String(labelList.deleteCharAt(labelList.length() - 1)) + " (" + depth +")";
   }
 
   @Override

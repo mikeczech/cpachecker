@@ -38,6 +38,7 @@ public class ASTree {
   public ASTree(ASTNode pRoot) {
     this.tree.addVertex(pRoot);
     this.root = pRoot;
+    reinitASTNodeDepth();
   }
 
   public ASTree() { }
@@ -46,6 +47,20 @@ public class ASTree {
     return this.tree;
   }
 
+  // Initializes depth attribute of ASTNode objects
+  private void reinitASTNodeDepth() {
+    root.setDepth(0);
+    for(ASTEdge e : tree.incomingEdgesOf(root))
+      reinitASTNodeDepth(e);
+  }
+
+  private void reinitASTNodeDepth(ASTEdge edge) {
+    ASTNode sourceNode = edge.getSourceNode();
+    ASTNode targetNode = edge.getTargetNode();
+    sourceNode.setDepth(targetNode.getDepth() + 1);
+    for(ASTEdge e : tree.incomingEdgesOf(sourceNode))
+      reinitASTNodeDepth(e);
+  }
   private void appendTree(ASTree pTree) {
     for(ASTNode node : pTree.tree.vertexSet())
       this.tree.addVertex(node);
@@ -57,6 +72,7 @@ public class ASTree {
     appendTree(pTree);
     this.tree.addEdge(pTree.getRoot(), root,
         new ASTEdge(pTree.getRoot(), root, ASTEdgeLabel.SYNTACTIC));
+    reinitASTNodeDepth();
   }
 
   public void addTree(ASTree pTree, ASTNode connectorNode) {
@@ -66,6 +82,7 @@ public class ASTree {
         new ASTEdge(connectorNode, root, ASTEdgeLabel.SYNTACTIC));
     this.tree.addEdge(pTree.getRoot(), connectorNode,
         new ASTEdge(pTree.getRoot(), connectorNode, ASTEdgeLabel.SYNTACTIC));
+    reinitASTNodeDepth();
   }
 
   public ASTNode getRoot() {
