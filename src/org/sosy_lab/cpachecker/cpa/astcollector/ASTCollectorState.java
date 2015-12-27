@@ -45,6 +45,26 @@ public class ASTCollectorState
     private final int source;
     private final int target;
 
+    private final boolean assumption;
+
+    public CFAEdgeInfo(int pSource, int pTarget, boolean pAssumption) {
+      source = pSource;
+      target = pTarget;
+      assumption = pAssumption;
+    }
+
+    public int getTarget() {
+      return target;
+    }
+
+    public int getSource() {
+      return source;
+    }
+
+    public boolean getAssumption() {
+      return assumption;
+    }
+
     @Override
     public boolean equals(Object pO) {
       if (this == pO) {
@@ -76,27 +96,6 @@ public class ASTCollectorState
       result = 31 * result + (assumption ? 1 : 0);
       return result;
     }
-
-    private final boolean assumption;
-
-    public CFAEdgeInfo(int pSource, int pTarget, boolean pAssumption) {
-      source = pSource;
-      target = pTarget;
-      assumption = pAssumption;
-    }
-
-    public int getTarget() {
-      return target;
-    }
-
-    public int getSource() {
-      return source;
-    }
-
-    public boolean getAssumption() {
-      return assumption;
-    }
-
   }
 
   private ASTree tree;
