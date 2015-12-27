@@ -89,22 +89,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     algorithm = pAlgorithm;
   }
 
-  // Initializes depth attribute of ASTNode objects
-  private void initASTNodeDepth(ASTree pTree) {
-    ASTNode root = pTree.getRoot();
-    root.setDepth(0);
-    DirectedGraph<ASTNode, ASTEdge> graph = pTree.asGraph();
-    for(ASTEdge e : graph.incomingEdgesOf(root))
-      initASTNodeDepth(graph, e);
-  }
-
-  private void initASTNodeDepth(DirectedGraph<ASTNode, ASTEdge> pTreeGraph, ASTEdge edge) {
-    ASTNode sourceNode = edge.getSourceNode();
-    ASTNode targetNode = edge.getTargetNode();
-    sourceNode.setDepth(targetNode.getDepth() + 1);
-    for(ASTEdge e : pTreeGraph.incomingEdgesOf(sourceNode))
-      initASTNodeDepth(pTreeGraph, e);
-  }
 
 //  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGMGraph) {
 //
@@ -140,24 +124,20 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   private DirectedMultigraph<ASTNode, ASTEdge> generateCFGFromStates(Set<ASTCollectorState> states) {
     DirectedMultigraph<ASTNode, ASTEdge> result = new DirectedMultigraph<>(ASTEdge.class);
     Map<Integer, ASTNode> sourceNodeToRoot = new HashMap<>();
-    // Map every CFAEdge (identified by its source node) to the root node of its AST
+    // Add all the ASTs to the graph
     for(ASTCollectorState s : states) {
-
       if(s.isInit())
         continue;
-
       for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
         int source = e.getSource();
+        // If there are multiple edges associated with an AST, add only one
         if(!sourceNodeToRoot.containsKey(source))
           sourceNodeToRoot.put(source, s.getTree().getRoot());
       }
-
-      // initialize depth attribute of nodes Todo find a better place to do this
-      initASTNodeDepth(s.getTree());
-
       boolean modified = Graphs.addGraph(result, s.getTree().asGraph());
       assert modified;
     }
+    // Add control-flow edges
     for(ASTCollectorState s : states) {
       if(s.isInit())
         continue;
