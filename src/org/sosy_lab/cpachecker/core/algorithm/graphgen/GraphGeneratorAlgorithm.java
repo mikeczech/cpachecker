@@ -84,11 +84,11 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
   @Option(secure=true, name = "graphOutputFile", description = "Output file of Graph Representation (DOT)")
   @FileOption(Type.OUTPUT_FILE)
-  private Path graphOutputFile = Paths.get("output/graph.dot");
+  private Path graphOutputFile = Paths.get("output/vtask_graph.dot");
 
   @Option(secure=true, name = "graphMLOutputFile", description = "Output file of Graph Representation (GraphML)")
   @FileOption(Type.OUTPUT_FILE)
-  private Path graphMLOutputFile = Paths.get("output/graph.graphml");
+  private Path graphMLOutputFile = Paths.get("output/vtask_graph.graphml");
 
   @Option(secure=true, name = "nodeLabels", description = "Output file of labels of nodes")
   @FileOption(Type.OUTPUT_FILE)
