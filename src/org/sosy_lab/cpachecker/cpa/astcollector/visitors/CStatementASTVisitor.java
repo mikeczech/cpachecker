@@ -75,9 +75,13 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
   @Override public ASTree visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(
-        pIastFunctionCallAssignmentStatement.getFunctionCallExpression()
-            .getDeclaration().getName());
+    Optional<ASTNodeLabel> specialLabel = Optional.absent();
+    if(pIastFunctionCallAssignmentStatement.getFunctionCallExpression().getDeclaration() != null) {
+        specialLabel = ASTCollectorUtils.getSpecialLabel(
+            pIastFunctionCallAssignmentStatement.getFunctionCallExpression()
+                .getDeclaration().getName());
+    }
+
     ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
@@ -101,9 +105,12 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
   @Override
   public ASTree visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(
-        pIastFunctionCallStatement.getFunctionCallExpression()
-            .getDeclaration().getName());
+    Optional<ASTNodeLabel> specialLabel = Optional.absent();
+    if(pIastFunctionCallStatement.getFunctionCallExpression().getDeclaration() != null) {
+      specialLabel = ASTCollectorUtils.getSpecialLabel(
+          pIastFunctionCallStatement.getFunctionCallExpression()
+              .getDeclaration().getName());
+    }
     ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())

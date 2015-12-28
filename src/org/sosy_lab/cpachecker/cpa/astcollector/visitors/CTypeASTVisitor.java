@@ -70,10 +70,12 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
     tree.addTree(typeTree, new ASTNode(
         ASTNodeLabel.TYPE));
 
-    ASTree lengthTree = pArrayType.getLength().accept(
-        new CExpressionASTVisitor(this.cfaEdge));
-    tree.addTree(lengthTree, new ASTNode(
-        ASTNodeLabel.LENGTH));
+    if(pArrayType.getLength() != null) {
+      ASTree lengthTree = pArrayType.getLength().accept(
+          new CExpressionASTVisitor(this.cfaEdge));
+      tree.addTree(lengthTree, new ASTNode(
+          ASTNodeLabel.LENGTH));
+    }
 
     return tree;
   }
@@ -188,7 +190,7 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
   @Override
   public ASTree visit(CProblemType pProblemType)
       throws CPATransferException {
-    throw new UnsupportedCCodeException("Unspecified declaration type: ProblemType", this.cfaEdge);
+    return new ASTree(new ASTNode(ASTNodeLabel.PROBLEM_TYPE));
   }
 
   @Override

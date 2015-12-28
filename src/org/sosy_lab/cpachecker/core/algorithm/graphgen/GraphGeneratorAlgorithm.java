@@ -23,10 +23,11 @@
  */
 package org.sosy_lab.cpachecker.core.algorithm.graphgen;
 
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -38,6 +39,8 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graphs;
 import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
+import org.jgrapht.ext.GraphMLExporter;
+import org.jgrapht.ext.IntegerEdgeNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.sosy_lab.common.configuration.FileOption;
@@ -57,7 +60,7 @@ import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.CFAEdgeInfo;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdge;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdgeLabel;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
-import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
 import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
 import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
@@ -79,9 +82,29 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
   private final Algorithm algorithm;
 
-  @Option(secure=true, name = "gmOutputFile", description = "Output file of Graph Model")
+  @Option(secure=true, name = "graphOutputFile", description = "Output file of Graph Representation (DOT)")
   @FileOption(Type.OUTPUT_FILE)
-  private Path gmOutputFile = Paths.get("output/gm.dot");
+  private Path graphOutputFile = Paths.get("output/gm.dot");
+
+  @Option(secure=true, name = "graphMLOutputFile", description = "Output file of Graph Representation (GraphML)")
+  @FileOption(Type.OUTPUT_FILE)
+  private Path graphMLOutputFile = Paths.get("output/gm.graphml");
+
+  @Option(secure=true, name = "nodeLabels", description = "Output file of labels of nodes")
+  @FileOption(Type.OUTPUT_FILE)
+  private Path nodeLabelsOutputFile = Paths.get("output/nodes.labels");
+
+  @Option(secure=true, name = "edgeTypeLabels", description = "Output file of types of edges")
+  @FileOption(Type.OUTPUT_FILE)
+  private Path edgeTypesOutputFile = Paths.get("output/edge_types.labels");
+
+  @Option(secure=true, name = "edgeTruthLabels", description = "Output file of truth values of edges")
+  @FileOption(Type.OUTPUT_FILE)
+  private Path edgeTruthOutputFile = Paths.get("output/edge_truth.labels");
+
+  @Option(secure=true, name = "nodeDepthLabels", description = "Output file of depth values of nodes")
+  @FileOption(Type.OUTPUT_FILE)
+  private Path nodeDepthOutputFile = Paths.get("output/node_depth.labels");
 
   public GraphGeneratorAlgorithm(Algorithm pAlgorithm, LogManager pLogger,
       ConfigurableProgramAnalysis pCpa) {
@@ -89,38 +112,41 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     algorithm = pAlgorithm;
   }
 
+  /**
+   * Prunes all nodes from a graph, which are associated with the label BLANK
+   * @param pGraph
+   */
+  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGraph) {
+    Set<ASTEdge> edgesToRemove = new HashSet<>();
+    Set<ASTNode> nodesToRemove = new HashSet<>();
+    // add control flow edge between sources and targets of blank nodes
+    for(ASTNode node : pGraph.vertexSet()) {
+      if(node.isBlank()) {
+        assert pGraph.outDegreeOf(node) == 1;
+        for(ASTEdge e : pGraph.outgoingEdgesOf(node)) {
+          ASTNode target = e.getTargetNode();
+          edgesToRemove.add(e);
+          for(ASTEdge sourceEdge : pGraph.incomingEdgesOf(node)) {
+            ASTNode source = sourceEdge.getSourceNode();
+            ASTEdge newEdge = new ASTEdge(source, target, ASTEdgeLabel.CONTROL_FLOW);
+            newEdge.setTruthValue(sourceEdge.getTruthValue());
+            pGraph.addEdge(source, target, newEdge);
+            edgesToRemove.add(sourceEdge);
+          }
+        }
+        nodesToRemove.add(node);
+      }
+    }
+    pGraph.removeAllEdges(edgesToRemove);
+    pGraph.removeAllVertices(nodesToRemove);
+  }
 
-//  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGMGraph) {
-//
-//    Set<ASTEdge> edgesToRemove = new HashSet<>();
-//    Set<ASTNode> nodesToRemove = new HashSet<>();
-//
-//    for(ASTNode node : pGMGraph.vertexSet()) {
-//      if(node.isBlank()) {
-//
-//        assert pGMGraph.outDegreeOf(node) == 1;
-//
-//        for(ASTEdge e : pGMGraph.outgoingEdgesOf(node)) {
-//          ASTNode target = e.getTargetNode();
-//          edgesToRemove.add(e);
-//          for(ASTEdge sourceEdge : pGMGraph.incomingEdgesOf(node)) {
-//            ASTNode source = sourceEdge.getSourceNode();
-//            Set<ASTEdgeLabel> labels = new HashSet<>();
-//            labels.addAll(e.getAstEdgeLabels());
-//            labels.addAll(sourceEdge.getAstEdgeLabels());
-//            pGMGraph.addEdge(source, target,
-//                new ASTEdge(source, target, new ArrayList<>(labels)));
-//            edgesToRemove.add(sourceEdge);
-//          }
-//        }
-//        nodesToRemove.add(node);
-//
-//      }
-//    }
-//    pGMGraph.removeAllEdges(edgesToRemove);
-//    pGMGraph.removeAllVertices(nodesToRemove);
-//  }
-
+  /**
+   * Takes a set of ASTCollector states and constructs a graph representation
+   * containing statement ASTs ans control-flow edges between root nodes.
+   * @param states
+   * @return
+   */
   private DirectedMultigraph<ASTNode, ASTEdge> generateCFGFromStates(Set<ASTCollectorState> states) {
     DirectedMultigraph<ASTNode, ASTEdge> result = new DirectedMultigraph<>(ASTEdge.class);
     Map<Integer, ASTNode> sourceNodeToRoot = new HashMap<>();
@@ -156,6 +182,82 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       }
     }
     return result;
+  }
+
+  /**
+   * Writes a file containing a list of node id - label pairs
+   * @param graph
+   */
+  private void exportNodeLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+    PrintWriter wtr = null;
+    try {
+      wtr = new PrintWriter(nodeLabelsOutputFile.getPath());
+      for(ASTNode node : graph.vertexSet()) {
+        StringBuilder label = new StringBuilder();
+        for (ASTNodeLabel l : node.getLabels()) {
+          label.append(l.name() + "_");
+        }
+        wtr.println(String.format("%s,%s", node.getId(), new String(label.deleteCharAt(label.length() - 1))));
+      }
+    } catch (FileNotFoundException pE) {
+      pE.printStackTrace();
+    } finally {
+      wtr.close();
+    }
+  }
+
+  /**
+   * Writes a file containing edge - type pairs
+   * @param graph
+   */
+  private void exportEdgeTypeLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+    PrintWriter wtr = null;
+    try {
+      wtr = new PrintWriter(edgeTypesOutputFile.getPath());
+      for(ASTEdge edge : graph.edgeSet()) {
+        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getAstEdgeLabel().name()));
+      }
+    } catch (FileNotFoundException pE) {
+      pE.printStackTrace();
+    } finally {
+      wtr.close();
+    }
+  }
+
+  /**
+   * Writes a file containing edge - truth value (CFG) pairs
+   * @param graph
+   */
+  private void exportEdgeTruthLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+    PrintWriter wtr = null;
+    try {
+      wtr = new PrintWriter(edgeTruthOutputFile.getPath());
+      for(ASTEdge edge : graph.edgeSet()) {
+        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getTruthValue()));
+      }
+    } catch (FileNotFoundException pE) {
+      pE.printStackTrace();
+    } finally {
+      wtr.close();
+    }
+  }
+
+  /**
+   * Writes a file containing node - depth pairs
+   * @param graph
+   */
+  private void exportNodeDepthLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+    PrintWriter wtr = null;
+    try {
+      wtr = new PrintWriter(nodeDepthOutputFile.getPath());
+      for(ASTNode node : graph.vertexSet()) {
+        wtr.println(String.format("%s,%s", node.getId(), node.getDepth()));
+      }
+    } catch (FileNotFoundException pE) {
+      pE.printStackTrace();
+    } finally {
+      wtr.close();
+    }
   }
 
   private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
@@ -260,10 +362,11 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
 
     // Create graph representation
-    DirectedMultigraph<ASTNode, ASTEdge> gm = generateCFGFromStates(states);
+    DirectedMultigraph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    //pruneBlankNodes(gm);
+    pruneBlankNodes(graph);
 
+    // Export graph
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
         new VertexNameProvider<ASTNode>() {
           @Override
@@ -275,7 +378,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           @Override
           public String getVertexName(ASTNode o) {
             return o.toString();
-            //return String.valueOf(o.getDepth());
           }
         },
         new EdgeNameProvider<ASTEdge>() {
@@ -285,10 +387,41 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           }
         });
     try {
-      dotExp.export(new FileWriter(gmOutputFile.getPath()), gm);
+      dotExp.export(new FileWriter(graphOutputFile.getPath()), graph);
     } catch (IOException e) {
       logger.logException(Level.ALL, e, "Cannot write DOT");
     }
+
+    GraphMLExporter<ASTNode, ASTEdge> gmlExp = new GraphMLExporter<>(
+        new VertexNameProvider<ASTNode>() {
+          @Override
+          public String getVertexName(ASTNode o) {
+            return String.valueOf(o.getId());
+          }
+        },
+        new VertexNameProvider<ASTNode>() {
+          @Override
+          public String getVertexName(ASTNode o) {
+            return o.toString();
+          }
+        },
+        new IntegerEdgeNameProvider(),
+        new EdgeNameProvider<ASTEdge>() {
+          @Override
+          public String getEdgeName(ASTEdge o) {
+            return o.toString();
+          }
+        });
+    try {
+      gmlExp.export(new FileWriter(graphMLOutputFile.getPath()), graph);
+    } catch (Exception e) {
+      logger.logException(Level.ALL, e, "Cannot write GraphML");
+    }
+
+    exportNodeLabels(graph);
+    exportEdgeTypeLabels(graph);
+    exportEdgeTruthLabels(graph);
+    exportNodeDepthLabels(graph);
 
     logger.log(Level.INFO, "GM generator algorithm finished.");
     return result;
