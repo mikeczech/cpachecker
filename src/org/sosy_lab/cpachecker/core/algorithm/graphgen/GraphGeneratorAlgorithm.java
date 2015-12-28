@@ -84,11 +84,11 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
   @Option(secure=true, name = "graphOutputFile", description = "Output file of Graph Representation (DOT)")
   @FileOption(Type.OUTPUT_FILE)
-  private Path graphOutputFile = Paths.get("output/gm.dot");
+  private Path graphOutputFile = Paths.get("output/graph.dot");
 
   @Option(secure=true, name = "graphMLOutputFile", description = "Output file of Graph Representation (GraphML)")
   @FileOption(Type.OUTPUT_FILE)
-  private Path graphMLOutputFile = Paths.get("output/gm.graphml");
+  private Path graphMLOutputFile = Paths.get("output/graph.graphml");
 
   @Option(secure=true, name = "nodeLabels", description = "Output file of labels of nodes")
   @FileOption(Type.OUTPUT_FILE)
@@ -260,77 +260,77 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
   }
 
-  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
-      DirectedMultigraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
-    Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
-    for(ASTCollectorState s : states.values()) {
-      ASTNode targetRoot = s.getTree().getRoot();
-      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
-        ReachingDefState reachDefState = reachDef.get(e.getSource());
-        for(String var : s.getVariables()) {
-
-          Set<DefinitionPoint> local = reachDefState.getLocalReachingDefinitions().get(var);
-          Set<DefinitionPoint> global = reachDefState.getGlobalReachingDefinitions().get(var);
-          List<DefinitionPoint> defPoints = new ArrayList<>();
-          if(local != null)
-            defPoints.addAll(local);
-          if(global != null)
-            defPoints.addAll(global);
-
-          // Create for each program definition point a data dependence edge
-          for(DefinitionPoint p : defPoints) {
-            if(p instanceof ProgramDefinitionPoint) {
-              ProgramDefinitionPoint pdp = (ProgramDefinitionPoint)p;
-              ASTNode sourceRoot = states.get(pdp.getDefinitionEntryLocation().getNodeNumber(),
-                  pdp.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
-              pGM.addEdge(sourceRoot, targetRoot, new ASTEdge(sourceRoot, targetRoot, ASTEdgeLabel.DATA_DEPENDENCE));
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private Map<Integer, ReachingDefState> collectReachDef(Map<Integer, Set<AbstractState>> statesPerNode) {
-    Map<Integer, ReachingDefState> result = new HashMap<>();
-    for(Integer nodeNum : statesPerNode.keySet()) {
-      Set<ReachingDefState> reachDefStates = new HashSet<>();
-      // Collect ReachDef states for node
-      for(AbstractState absState : statesPerNode.get(nodeNum)) {
-        ARGState state = (ARGState)absState;
-        CompositeState compState = (CompositeState)state.getWrappedState();
-        for(AbstractState child : compState.getWrappedStates()) {
-          if (child instanceof ReachingDefState) {
-            ReachingDefState reachDef = (ReachingDefState)child;
-            reachDefStates.add(reachDef);
-          }
-        }
-      }
-      // Merge ReachDef states for node
-      Map<String, Set<DefinitionPoint>> localReachDef = new HashMap<>();
-      Map<String, Set<DefinitionPoint>> globalReachDef = new HashMap<>();
-      for(ReachingDefState rdState : reachDefStates) {
-        for(String var : rdState.getLocalReachingDefinitions().keySet()) {
-          if(!localReachDef.containsKey(var))
-            localReachDef.put(var, new HashSet<DefinitionPoint>());
-          localReachDef.get(var).addAll(rdState.getLocalReachingDefinitions().get(var));
-        }
-        for(String var : rdState.getGlobalReachingDefinitions().keySet()) {
-          if(!globalReachDef.containsKey(var))
-            globalReachDef.put(var, new HashSet<DefinitionPoint>());
-          globalReachDef.get(var).addAll(rdState.getGlobalReachingDefinitions().get(var));
-        }
-      }
-      result.put(nodeNum, new ReachingDefState(localReachDef, globalReachDef, null));
-    }
-    return result;
-  }
+//  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
+//      DirectedMultigraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
+//    Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
+//    for(ASTCollectorState s : states.values()) {
+//      ASTNode targetRoot = s.getTree().getRoot();
+//      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
+//        ReachingDefState reachDefState = reachDef.get(e.getSource());
+//        for(String var : s.getVariables()) {
+//
+//          Set<DefinitionPoint> local = reachDefState.getLocalReachingDefinitions().get(var);
+//          Set<DefinitionPoint> global = reachDefState.getGlobalReachingDefinitions().get(var);
+//          List<DefinitionPoint> defPoints = new ArrayList<>();
+//          if(local != null)
+//            defPoints.addAll(local);
+//          if(global != null)
+//            defPoints.addAll(global);
+//
+//          // Create for each program definition point a data dependence edge
+//          for(DefinitionPoint p : defPoints) {
+//            if(p instanceof ProgramDefinitionPoint) {
+//              ProgramDefinitionPoint pdp = (ProgramDefinitionPoint)p;
+//              ASTNode sourceRoot = states.get(pdp.getDefinitionEntryLocation().getNodeNumber(),
+//                  pdp.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
+//              pGM.addEdge(sourceRoot, targetRoot, new ASTEdge(sourceRoot, targetRoot, ASTEdgeLabel.DATA_DEPENDENCE));
+//            }
+//          }
+//        }
+//      }
+//    }
+//  }
+//
+//  private Map<Integer, ReachingDefState> collectReachDef(Map<Integer, Set<AbstractState>> statesPerNode) {
+//    Map<Integer, ReachingDefState> result = new HashMap<>();
+//    for(Integer nodeNum : statesPerNode.keySet()) {
+//      Set<ReachingDefState> reachDefStates = new HashSet<>();
+//      // Collect ReachDef states for node
+//      for(AbstractState absState : statesPerNode.get(nodeNum)) {
+//        ARGState state = (ARGState)absState;
+//        CompositeState compState = (CompositeState)state.getWrappedState();
+//        for(AbstractState child : compState.getWrappedStates()) {
+//          if (child instanceof ReachingDefState) {
+//            ReachingDefState reachDef = (ReachingDefState)child;
+//            reachDefStates.add(reachDef);
+//          }
+//        }
+//      }
+//      // Merge ReachDef states for node
+//      Map<String, Set<DefinitionPoint>> localReachDef = new HashMap<>();
+//      Map<String, Set<DefinitionPoint>> globalReachDef = new HashMap<>();
+//      for(ReachingDefState rdState : reachDefStates) {
+//        for(String var : rdState.getLocalReachingDefinitions().keySet()) {
+//          if(!localReachDef.containsKey(var))
+//            localReachDef.put(var, new HashSet<DefinitionPoint>());
+//          localReachDef.get(var).addAll(rdState.getLocalReachingDefinitions().get(var));
+//        }
+//        for(String var : rdState.getGlobalReachingDefinitions().keySet()) {
+//          if(!globalReachDef.containsKey(var))
+//            globalReachDef.put(var, new HashSet<DefinitionPoint>());
+//          globalReachDef.get(var).addAll(rdState.getGlobalReachingDefinitions().get(var));
+//        }
+//      }
+//      result.put(nodeNum, new ReachingDefState(localReachDef, globalReachDef, null));
+//    }
+//    return result;
+//  }
 
   @Override
   public AlgorithmStatus run(ReachedSet reachedSet)
       throws CPAException, InterruptedException, CPAEnabledAnalysisPropertyViolationException {
     AlgorithmStatus result = algorithm.run(reachedSet);
-    logger.log(Level.INFO, "GM generator algorithm started.");
+    logger.log(Level.INFO, "Graph generator algorithm started.");
 
     // Fill data structures
     Set<ASTCollectorState> states = new HashSet<>();
@@ -423,7 +423,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     exportEdgeTruthLabels(graph);
     exportNodeDepthLabels(graph);
 
-    logger.log(Level.INFO, "GM generator algorithm finished.");
+    logger.log(Level.INFO, "graph generator algorithm finished.");
     return result;
   }
 }
