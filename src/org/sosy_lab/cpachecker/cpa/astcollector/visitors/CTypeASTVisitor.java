@@ -131,6 +131,7 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
       case UNION:
         root.addLabel(ASTNodeLabel.UNION);
     }
+
     return tree;
   }
 

@@ -112,29 +112,16 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * Prunes all nodes from a graph, which are associated with the label BLANK
    * @param pGraph
    */
-  private void pruneBlankNodes(DirectedGraph<ASTNode, ASTEdge> pGraph) {
-    Set<ASTEdge> edgesToRemove = new HashSet<>();
+  private void pruneBlankNodes(DirectedMultigraph<ASTNode, ASTEdge> pGraph) {
     Set<ASTNode> nodesToRemove = new HashSet<>();
     // add control flow edge between sources and targets of blank nodes
     for(ASTNode node : pGraph.vertexSet()) {
       if(node.isBlank()) {
-        assert pGraph.outDegreeOf(node) == 1;
-        for(ASTEdge e : pGraph.outgoingEdgesOf(node)) {
-          ASTNode target = e.getTargetNode();
-          edgesToRemove.add(e);
-          for(ASTEdge sourceEdge : pGraph.incomingEdgesOf(node)) {
-            ASTNode source = sourceEdge.getSourceNode();
-            ASTEdge newEdge = new ASTEdge(source, target, ASTEdgeLabel.CONTROL_FLOW);
-            newEdge.setTruthValue(sourceEdge.getTruthValue());
-            pGraph.addEdge(source, target, newEdge);
-            edgesToRemove.add(sourceEdge);
-          }
-        }
         nodesToRemove.add(node);
       }
     }
-    pGraph.removeAllEdges(edgesToRemove);
-    pGraph.removeAllVertices(nodesToRemove);
+    for(ASTNode node : nodesToRemove)
+      removeASTFromGraph(pGraph, new ASTree(node), true);
   }
 
   /**
@@ -261,7 +248,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param graph
    * @param tree
    */
-  private void removeASTFromGraph(DirectedMultigraph<ASTNode, ASTEdge> graph, ASTree tree) {
+  private void removeASTFromGraph(DirectedMultigraph<ASTNode, ASTEdge> graph, ASTree tree, boolean ignoreOutgoing) {
 
     ASTNode root = tree.getRoot();
     Set<ASTEdge> incomingEdges = graph.incomingEdgesOf(root);
@@ -272,7 +259,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       for(ASTEdge outgoing : outgoingEdges) {
 
         ASTNode target = outgoing.getTargetNode();
-        if(incoming.equalAttributes(outgoing)) {
+        if(ignoreOutgoing || incoming.equalAttributes(outgoing)) {
           ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
           newEdge.setTruthValue(incoming.getTruthValue());
           graph.addEdge(source, target, newEdge);
@@ -296,6 +283,13 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     graph.removeAllEdges(outgoingEdges);
   }
 
+  /**
+   * Prunes global declarations which are neither used locally nor within other
+   * global declarations. (it slightly reduces some graphs, but its not perfect though)
+   * @param graph
+   * @param globalStates
+   * @param nonGlobalStates
+   */
   private void pruneUnusedGlobalDeclarations(
       DirectedMultigraph<ASTNode, ASTEdge> graph,
       Set<ASTCollectorState> globalStates,
@@ -307,10 +301,24 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
 
     for(ASTCollectorState s : globalStates) {
+      boolean dependOnGlobal = false;
+      for(ASTCollectorState ss : globalStates) {
+        if(ss != s) {
+          for(String id : s.getTree().getIdentifiers()) {
+            if(ss.getTree().getIdentifiers().contains(id)) {
+              dependOnGlobal = true;
+              break;
+            }
+          }
+        }
+        if(dependOnGlobal)
+          break;
+      }
+      if(dependOnGlobal)
+        continue;
       Set<String> globalIdentifiers = s.getTree().getIdentifiers();
-      assert globalIdentifiers.size() == 1;
       if(!localIdentifiers.containsAll(globalIdentifiers)) {
-        removeASTFromGraph(graph, s.getTree());
+        removeASTFromGraph(graph, s.getTree(), false);
       }
     }
 
@@ -430,7 +438,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     DirectedMultigraph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
     pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    //pruneBlankNodes(graph);
+    pruneBlankNodes(graph);
 
 
     // Export graph
