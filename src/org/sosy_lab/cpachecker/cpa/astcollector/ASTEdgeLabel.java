@@ -26,8 +26,22 @@ package org.sosy_lab.cpachecker.cpa.astcollector;
 import java.io.Serializable;
 
 public enum ASTEdgeLabel implements Serializable {
-  SYNTACTIC,
-  DATA_DEPENDENCE,
-  CONTROL_DEPENDENCE,
-  CONTROL_FLOW,
+  DATA_DEPENDENCE(1),
+  CONTROL_DEPENDENCE(2),
+  CONTROL_FLOW(3),
+  SYNTACTIC(4),
+
+  TRUE(5),
+  FALSE(6);
+
+  private final int value;
+
+  ASTEdgeLabel(int pValue) {
+    value = pValue;
+  }
+
+  public int getValue() {
+    return value;
+  }
+
 }

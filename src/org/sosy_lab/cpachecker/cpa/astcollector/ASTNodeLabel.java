@@ -78,7 +78,6 @@ public enum ASTNodeLabel implements Serializable {
   INT_LITERAL_MEDIUM,
   INT_LITERAL_LARGE,
   STRING_LITERAL,
-  VARIABLE_ID,
   AMPER,
   TILDE,
   SIZEOF,
@@ -97,9 +96,6 @@ public enum ASTNodeLabel implements Serializable {
   FUNC_CALL,
   GLOBAL,
   ENUM_TYPE,
-
-
-
 
   // Statements
   DECL,

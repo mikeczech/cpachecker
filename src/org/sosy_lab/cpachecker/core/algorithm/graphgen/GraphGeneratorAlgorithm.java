@@ -215,7 +215,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     try {
       wtr = new PrintWriter(edgeTypesOutputFile.getPath());
       for(ASTEdge edge : graph.edgeSet()) {
-        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getAstEdgeLabel().name()));
+        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getAstEdgeLabel().getValue()));
       }
     } catch (FileNotFoundException pE) {
       pE.printStackTrace();
@@ -233,7 +233,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     try {
       wtr = new PrintWriter(edgeTruthOutputFile.getPath());
       for(ASTEdge edge : graph.edgeSet()) {
-        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getTruthValue()));
+        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getTruthLabel().getValue()));
       }
     } catch (FileNotFoundException pE) {
       pE.printStackTrace();
@@ -364,7 +364,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     // Create graph representation
     DirectedMultigraph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    pruneBlankNodes(graph);
+    //pruneBlankNodes(graph);
 
     // Export graph
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(

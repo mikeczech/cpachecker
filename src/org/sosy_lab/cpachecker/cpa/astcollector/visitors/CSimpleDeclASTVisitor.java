@@ -61,7 +61,7 @@ public class CSimpleDeclASTVisitor
       throws CPATransferException {
     Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(pDecl.getName());
 
-    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNCTION_DECL));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNCTION_DECL), pDecl.getName());
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
       root.addLabel(specialLabel.get());
@@ -84,7 +84,7 @@ public class CSimpleDeclASTVisitor
   @Override
   public ASTree visit(CComplexTypeDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.COMPLEX_TYPE_DECL));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.COMPLEX_TYPE_DECL), pDecl.getName());
     ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
     return tree;
@@ -93,7 +93,7 @@ public class CSimpleDeclASTVisitor
   @Override
   public ASTree visit(CTypeDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.TYPE_DECL));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.TYPE_DECL), pDecl.getName());
     ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
     return tree;
@@ -102,7 +102,7 @@ public class CSimpleDeclASTVisitor
   @Override
   public ASTree visit(CVariableDeclaration pDecl)
       throws CPATransferException {
-    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.VARIABLE_DECL));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.VARIABLE_DECL), pDecl.getName());
     ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
     // Todo: add initializer

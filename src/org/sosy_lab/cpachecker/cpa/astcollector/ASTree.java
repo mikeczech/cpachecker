@@ -23,6 +23,9 @@
  */
 package org.sosy_lab.cpachecker.cpa.astcollector;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.graph.DefaultDirectedGraph;
 
@@ -35,16 +38,27 @@ public class ASTree {
 
   private ASTNode root = null;
 
+  private Set<String> identifierList = new HashSet<>();
+
   public ASTree(ASTNode pRoot) {
     this.tree.addVertex(pRoot);
     this.root = pRoot;
     reinitASTNodeDepth();
   }
 
+  public ASTree(ASTNode pRoot, String identifier) {
+    this(pRoot);
+    identifierList.add(identifier);
+  }
+
   public ASTree() { }
 
   public DirectedGraph<ASTNode, ASTEdge> asGraph() {
     return this.tree;
+  }
+
+  public Set<String> getIdentifierList() {
+    return identifierList;
   }
 
   // Initializes depth attribute of ASTNode objects
@@ -66,6 +80,7 @@ public class ASTree {
       this.tree.addVertex(node);
     for(ASTEdge edge : pTree.tree.edgeSet())
       this.tree.addEdge(edge.getSourceNode(), edge.getTargetNode(), edge);
+    identifierList.addAll(pTree.identifierList);
   }
 
   public void addTree(ASTree pTree) {

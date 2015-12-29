@@ -84,7 +84,7 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
   public ASTree visit(CCompositeType pCompositeType)
       throws CPATransferException {
     ASTree tree = new ASTree(new ASTNode(
-        ASTNodeLabel.COMPOSITE_TYPE));
+        ASTNodeLabel.COMPOSITE_TYPE), pCompositeType.getName());
     ASTNode root = tree.getRoot();
 
     if(pCompositeType.isConst())
@@ -113,7 +113,7 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
   public ASTree visit(CElaboratedType pElaboratedType)
       throws CPATransferException {
     ASTree tree = new ASTree(new ASTNode(
-        ASTNodeLabel.ELABORATED_TYPE));
+        ASTNodeLabel.ELABORATED_TYPE), pElaboratedType.getName());
     ASTNode root = tree.getRoot();
 
     if(pElaboratedType.isConst())
@@ -137,14 +137,14 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
   @Override
   public ASTree visit(CEnumType pEnumType) throws CPATransferException {
     return new ASTree(new ASTNode(
-        ASTNodeLabel.ENUM_TYPE));
+        ASTNodeLabel.ENUM_TYPE), pEnumType.getName());
   }
 
   @Override
   public ASTree visit(CFunctionType pFunctionType)
       throws CPATransferException {
     ASTree tree = new ASTree(new ASTNode(
-        ASTNodeLabel.FUNCTION_TYPE));
+        ASTNodeLabel.FUNCTION_TYPE), pFunctionType.getName());
     ASTNode root = tree.getRoot();
 
     if(pFunctionType.isConst())
@@ -254,7 +254,7 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
   public ASTree visit(CTypedefType pTypedefType)
       throws CPATransferException {
     ASTree tree = new ASTree(new ASTNode(
-        ASTNodeLabel.TYPEDEF_TYPE));
+        ASTNodeLabel.TYPEDEF_TYPE), pTypedefType.getName());
     ASTree realTypeTree = pTypedefType.getRealType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(realTypeTree, new ASTNode(
         ASTNodeLabel.REAL_TYPE));

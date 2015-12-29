@@ -182,8 +182,11 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
   @Override
   public ASTree visit(CTypeIdExpression pIastTypeIdExpression)
       throws CPATransferException {
-    return new ASTree(new ASTNode(
-        ASTNodeLabel.VARIABLE_ID));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.TYPE_ID));
+    ASTree typeIdTree = pIastTypeIdExpression.getType()
+        .accept(new CTypeASTVisitor(this.cfaEdge));
+    tree.addTree(typeIdTree);
+    return tree;
   }
 
   @Override
@@ -260,9 +263,9 @@ public class CExpressionASTVisitor implements CExpressionVisitor<ASTree, CPATran
       throws CPATransferException {
     Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(pIastIdExpression.getName());
     if(specialLabel.isPresent())
-       return new ASTree(new ASTNode(specialLabel.get()));
+       return new ASTree(new ASTNode(specialLabel.get()), pIastIdExpression.getName());
     return new ASTree(new ASTNode(
-        ASTNodeLabel.VARIABLE_ID));
+        ASTNodeLabel.ID), pIastIdExpression.getName());
   }
 
   @Override

@@ -63,6 +63,13 @@ public class ASTEdge extends DefaultEdge {
     return truthValue;
   }
 
+  public ASTEdgeLabel getTruthLabel() {
+    if(truthValue)
+      return ASTEdgeLabel.TRUE;
+    else
+      return ASTEdgeLabel.FALSE;
+  }
+
   public void setTruthValue(boolean pTruthValue) {
     truthValue = pTruthValue;
   }

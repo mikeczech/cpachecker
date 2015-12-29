@@ -82,7 +82,8 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
                 .getDeclaration().getName());
     }
 
-    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL),
+        pIastFunctionCallAssignmentStatement.getFunctionCallExpression().getDeclaration().getName());
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
       root.addLabel(specialLabel.get());
@@ -111,7 +112,8 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
           pIastFunctionCallStatement.getFunctionCallExpression()
               .getDeclaration().getName());
     }
-    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL),
+        pIastFunctionCallStatement.getFunctionCallExpression().getDeclaration().getName());
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
       root.addLabel(specialLabel.get());
