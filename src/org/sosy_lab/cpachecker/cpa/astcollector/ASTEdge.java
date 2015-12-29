@@ -70,6 +70,10 @@ public class ASTEdge extends DefaultEdge {
       return ASTEdgeLabel.FALSE;
   }
 
+  public boolean equalAttributes(ASTEdge edge) {
+    return astEdgeLabel == edge.getAstEdgeLabel() && truthValue == edge.getTruthValue();
+  }
+
   public void setTruthValue(boolean pTruthValue) {
     truthValue = pTruthValue;
   }

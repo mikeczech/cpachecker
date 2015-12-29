@@ -27,10 +27,8 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -61,11 +59,9 @@ import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdge;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTEdgeLabel;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
 import org.sosy_lab.cpachecker.cpa.location.LocationState;
-import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
-import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.DefinitionPoint;
-import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.ProgramDefinitionPoint;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
@@ -260,6 +256,66 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
   }
 
+  /**
+   * Removes an AST from a graph and reconnects incoming/outgoing edges
+   * @param graph
+   * @param tree
+   */
+  private void removeASTFromGraph(DirectedMultigraph<ASTNode, ASTEdge> graph, ASTree tree) {
+
+    ASTNode root = tree.getRoot();
+    Set<ASTEdge> incomingEdges = graph.incomingEdgesOf(root);
+    Set<ASTEdge> outgoingEdges = graph.outgoingEdgesOf(root);
+
+    for(ASTEdge incoming : incomingEdges) {
+      ASTNode source = incoming.getSourceNode();
+      for(ASTEdge outgoing : outgoingEdges) {
+
+        ASTNode target = outgoing.getTargetNode();
+        if(incoming.equalAttributes(outgoing)) {
+          ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
+          newEdge.setTruthValue(incoming.getTruthValue());
+          graph.addEdge(source, target, newEdge);
+        } else {
+          // If both edges do not have equal attrbutes, create two new edges
+          ASTEdge newEdgeA = new ASTEdge(source, target, incoming.getAstEdgeLabel());
+          newEdgeA.setTruthValue(incoming.getTruthValue());
+          graph.addEdge(source, target, newEdgeA);
+
+          ASTEdge newEdgeB = new ASTEdge(source, target, outgoing.getAstEdgeLabel());
+          newEdgeB.setTruthValue(outgoing.getTruthValue());
+          graph.addEdge(source, target, newEdgeB);
+        }
+
+      }
+    }
+    // Remove AST
+    graph.removeAllEdges(tree.asGraph().edgeSet());
+    graph.removeAllVertices(tree.asGraph().vertexSet());
+    graph.removeAllEdges(incomingEdges);
+    graph.removeAllEdges(outgoingEdges);
+  }
+
+  private void pruneUnusedGlobalDeclarations(
+      DirectedMultigraph<ASTNode, ASTEdge> graph,
+      Set<ASTCollectorState> globalStates,
+      Set<ASTCollectorState> nonGlobalStates) {
+
+    Set<String> localIdentifiers = new HashSet<>();
+    for(ASTCollectorState s : nonGlobalStates) {
+        localIdentifiers.addAll(s.getTree().getIdentifiers());
+    }
+
+    for(ASTCollectorState s : globalStates) {
+      Set<String> globalIdentifiers = s.getTree().getIdentifiers();
+      assert globalIdentifiers.size() == 1;
+      if(!localIdentifiers.containsAll(globalIdentifiers)) {
+        removeASTFromGraph(graph, s.getTree());
+      }
+    }
+
+  }
+
 //  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
 //      DirectedMultigraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
 //    Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
@@ -334,8 +390,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
     // Fill data structures
     Set<ASTCollectorState> states = new HashSet<>();
+    Set<ASTCollectorState> globalDeclStates = new HashSet<>();
+    Set<ASTCollectorState> nonGlobalDeclStates = new HashSet<>();
+
     Table<Integer, Integer, ASTCollectorState> edgeToState = HashBasedTable.create();
     Map<Integer, Set<AbstractState>> locToAbstractState = new HashMap<>();
+
 
     for(AbstractState absState : reachedSet.asCollection()) {
 
@@ -347,7 +407,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           ASTCollectorState gmState = (ASTCollectorState)child;
           for(CFAEdgeInfo e : gmState.getCfaEdgeInfoSet())
             edgeToState.put(e.getSource(), e.getTarget(), gmState);
+
           states.add(gmState);
+          if(gmState.getTree().isGlobal())
+            globalDeclStates.add(gmState);
+          else
+            nonGlobalDeclStates.add(gmState);
         }
 
         if(child instanceof LocationState) {
@@ -363,8 +428,10 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
     // Create graph representation
     DirectedMultigraph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
+    pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
     //pruneBlankNodes(graph);
+
 
     // Export graph
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(

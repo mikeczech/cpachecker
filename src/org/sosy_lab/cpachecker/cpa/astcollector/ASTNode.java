@@ -69,6 +69,10 @@ public class ASTNode {
     return false;
   }
 
+  public boolean isGlobal() {
+    return labels.contains(ASTNodeLabel.GLOBAL);
+  }
+
   public List<ASTNodeLabel> getLabels() {
     return this.labels;
   }

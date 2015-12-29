@@ -57,8 +57,14 @@ public class ASTree {
     return this.tree;
   }
 
-  public Set<String> getIdentifierList() {
+  public Set<String> getIdentifiers() {
     return identifierList;
+  }
+
+  public boolean isGlobal() {
+    if(root == null)
+      return false;
+    return root.isGlobal();
   }
 
   // Initializes depth attribute of ASTNode objects
