@@ -25,15 +25,11 @@ package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.io.Serializable;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.collect.ImmutableSet;
-
 public enum ASTNodeLabel implements Serializable {
 
   // New
   START,
+  END,
   PROBLEM_TYPE,
   LOOP,
   BRANCH,

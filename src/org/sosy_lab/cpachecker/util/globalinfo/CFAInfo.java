@@ -35,12 +35,19 @@ public class CFAInfo {
   private final Map<Integer, CFANode> nodeNumberToNode;
   private LocationStateFactory locationStateFactory;
 
+  private final CFA cfa;
+
   CFAInfo(CFA cfa) {
     HashMap<Integer, CFANode> nodeNumberToNode = new HashMap<>();
     for (CFANode node : cfa.getAllNodes()) {
       nodeNumberToNode.put(node.getNodeNumber(), node);
     }
     this.nodeNumberToNode = nodeNumberToNode;
+    this.cfa = cfa;
+  }
+
+  public CFA getCfa() {
+    return cfa;
   }
 
   public CFANode getNodeByNodeNumber(int nodeNumber) {

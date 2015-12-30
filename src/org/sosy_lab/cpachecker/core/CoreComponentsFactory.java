@@ -242,7 +242,7 @@ public class CoreComponentsFactory {
 //              "Graph Model Generator needs GMCPA as Top CPA");
 //        }
         algorithm =
-            new GraphGeneratorAlgorithm(algorithm, logger, cpa);
+            new GraphGeneratorAlgorithm(algorithm, logger, cpa, cfa);
       }
 
       if (useResultCheckAlgorithm) {

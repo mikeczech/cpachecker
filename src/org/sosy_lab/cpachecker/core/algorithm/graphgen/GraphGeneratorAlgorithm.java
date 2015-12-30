@@ -38,20 +38,20 @@ import org.jgrapht.Graphs;
 import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.GraphMLExporter;
-import org.jgrapht.ext.IntegerEdgeNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
 import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.graph.DirectedPseudograph;
 import org.jgrapht.graph.EdgeReversedGraph;
-import org.jgrapht.graph.SimpleDirectedGraph;
 import org.sosy_lab.common.configuration.FileOption;
 import org.sosy_lab.common.configuration.FileOption.Type;
-import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.common.configuration.Option;
+import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.common.io.Path;
 import org.sosy_lab.common.io.Paths;
 import org.sosy_lab.common.log.LogManager;
+import org.sosy_lab.cpachecker.cfa.CFA;
+import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
+import org.sosy_lab.cpachecker.cfa.model.CFANode;
 import org.sosy_lab.cpachecker.core.algorithm.Algorithm;
 import org.sosy_lab.cpachecker.core.algorithm.graphgen.utils.Dominators;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
@@ -70,11 +70,8 @@ import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-
-import edu.umd.cs.findbugs.graph.Graph;
 
 /**
  * Created by zenscr on 26/11/15.
@@ -85,6 +82,8 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   private final LogManager logger;
 
   private final Algorithm algorithm;
+
+  private final CFA cfa;
 
   @Option(secure=true, name = "graphOutputFile", description = "Output file of Graph Representation (DOT)")
   @FileOption(Type.OUTPUT_FILE)
@@ -115,9 +114,10 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   private Path postDomTreeOutputFile = Paths.get("output/postdomtree.dot");
 
   public GraphGeneratorAlgorithm(Algorithm pAlgorithm, LogManager pLogger,
-      ConfigurableProgramAnalysis pCpa) {
+      ConfigurableProgramAnalysis pCpa, CFA pCfa) {
     logger = pLogger;
     algorithm = pAlgorithm;
+    cfa = pCfa;
   }
 
   /**
@@ -142,40 +142,60 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param states
    * @return
    */
-  private DirectedPseudograph<ASTNode, ASTEdge> generateCFGFromStates(Set<ASTCollectorState> states) {
+  private DirectedPseudograph<ASTNode, ASTEdge> generateCFGFromStates(Table<Integer, Integer, ASTCollectorState> edgeToState) {
     DirectedPseudograph<ASTNode, ASTEdge> result = new DirectedPseudograph<>(ASTEdge.class);
-    Map<Integer, ASTNode> sourceNodeToRoot = new HashMap<>();
-    // Add all the ASTs to the graph
-    for(ASTCollectorState s : states) {
-      if(s.isInit())
-        continue;
-      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
-        int source = e.getSource();
-        // If there are multiple edges associated with an AST, add only one
-        if(!sourceNodeToRoot.containsKey(source))
-          sourceNodeToRoot.put(source, s.getTree().getRoot());
-      }
-      //boolean modified = Graphs.addGraph(result, s.getTree().asGraph());
-      //assert modified;
-      result.addVertex(s.getTree().getRoot());
+    Set<CFAEdge> allCfaEdges = new HashSet<>();
+    for(CFANode n : cfa.getAllNodes()) {
+      for(int i = 0; i < n.getNumLeavingEdges(); i++)
+        allCfaEdges.add(n.getLeavingEdge(i));
+      for(int i = 0; i < n.getNumEnteringEdges(); i++)
+        allCfaEdges.add(n.getEnteringEdge(i));
     }
-    // Add control-flow edges
-    for(ASTCollectorState s : states) {
-      if(s.isInit())
-        continue;
-      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
-        int target = e.getTarget();
-        if(sourceNodeToRoot.containsKey(target)) {
-          ASTNode sourceRoot = s.getTree().getRoot();
-          ASTNode targetRoot = sourceNodeToRoot.get(target);
-          ASTEdge edge = new ASTEdge(sourceRoot, targetRoot,
-              ASTEdgeLabel.CONTROL_FLOW);
-          edge.setTruthValue(e.getAssumption());
-          result.addEdge(sourceRoot, targetRoot, edge);
-        } else {
-          // do nothing
-        }
+    // add nodes
+    Map<Integer, Set<ASTCollectorState>> sourceToStates = new HashMap<>();
+    for(CFAEdge e : allCfaEdges) {
+      int source = e.getPredecessor().getNodeNumber();
+      int target = e.getSuccessor().getNodeNumber();
 
+      if(!sourceToStates.containsKey(source))
+        sourceToStates.put(source, new HashSet<ASTCollectorState>());
+
+      if(edgeToState.contains(source, target)) {
+        ASTCollectorState state = edgeToState.get(source, target);
+        result.addVertex(state.getTree().getRoot());
+        sourceToStates.get(source).add(state);
+      } else {
+        ASTNode blank = new ASTNode(ASTNodeLabel.BLANK);
+        result.addVertex(blank);
+        ASTCollectorState newState = new ASTCollectorState(e, new ASTree(blank));
+        sourceToStates.get(source).add(newState);
+        edgeToState.put(source, target, newState);
+      }
+    }
+    // add control flow edges
+    for(CFAEdge e : allCfaEdges) {
+      int source = e.getPredecessor().getNodeNumber();
+      int target = e.getSuccessor().getNodeNumber();
+      ASTNode sourceNode = edgeToState.get(source, target).getTree().getRoot();
+      if(sourceToStates.containsKey(target)) {
+        for(ASTCollectorState s : sourceToStates.get(target)) {
+          ASTNode targetNode = s.getTree().getRoot();
+          ASTEdge edge = new ASTEdge(sourceNode, targetNode,
+              ASTEdgeLabel.CONTROL_FLOW);
+          edge.setTruthValue(edgeToState.get(source, target).getAssumptions().get(source, target));
+          result.addEdge(sourceNode, targetNode, edge);
+        }
+      }
+    }
+
+    // find nodes with out degree zero and connect them with an end node
+    ASTNode endNode = new ASTNode(ASTNodeLabel.END);
+    result.addVertex(endNode);
+    for(ASTNode n : result.vertexSet()) {
+      if(result.outDegreeOf(n) == 0 && n != endNode) {
+        ASTEdge edge = new ASTEdge(n, endNode,
+            ASTEdgeLabel.CONTROL_FLOW);
+        result.addEdge(n, endNode, edge);
       }
     }
     return result;
@@ -340,14 +360,15 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   private void addControlDependencies(DirectedPseudograph<ASTNode, ASTEdge> pInputGraph) {
     DirectedGraph<ASTNode, ASTEdge> graph = new EdgeReversedGraph<>(pInputGraph);
     // Find entry node
-    ASTNode entry = null;
+    Set<ASTNode> zeroOutNodes = new HashSet<>();
     for(ASTNode node : graph.vertexSet()) {
       if(graph.inDegreeOf(node) == 0) {
-        entry = node;
-        break;
+        zeroOutNodes.add(node);
       }
     }
-    assert entry != null;
+    assert zeroOutNodes.size() == 1;
+    ASTNode entry = zeroOutNodes.iterator().next();
+
     Set<ASTEdge> controlDependences = new HashSet<>();
     Dominators<ASTNode, ASTEdge> dominators = new Dominators<>(graph, entry);
     DirectedGraph<ASTNode, DefaultEdge> pdt = dominators.getDominatorTree();
@@ -476,13 +497,11 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     logger.log(Level.INFO, "Graph generator algorithm started.");
 
     // Fill data structures
-    Set<ASTCollectorState> states = new HashSet<>();
     Set<ASTCollectorState> globalDeclStates = new HashSet<>();
     Set<ASTCollectorState> nonGlobalDeclStates = new HashSet<>();
 
     Table<Integer, Integer, ASTCollectorState> edgeToState = HashBasedTable.create();
     Map<Integer, Set<AbstractState>> locToAbstractState = new HashMap<>();
-
 
     for(AbstractState absState : reachedSet.asCollection()) {
 
@@ -494,8 +513,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           ASTCollectorState gmState = (ASTCollectorState)child;
           for(CFAEdgeInfo e : gmState.getCfaEdgeInfoSet())
             edgeToState.put(e.getSource(), e.getTarget(), gmState);
-
-          states.add(gmState);
           if(gmState.getTree().isGlobal())
             globalDeclStates.add(gmState);
           else
@@ -512,14 +529,14 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
       }
     }
-
+    Set<ASTCollectorState> states = new HashSet<>(edgeToState.values());
     // Create graph representation
-    DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
+    DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
 //    pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
 //    pruneBlankNodes(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    //addControlDependencies(graph);
-    //addASTsToGraph(graph, states);
+    addControlDependencies(graph);
+    addASTsToGraph(graph, states);
 
     // Export graph
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(

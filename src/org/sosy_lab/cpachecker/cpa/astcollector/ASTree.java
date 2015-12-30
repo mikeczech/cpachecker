@@ -40,8 +40,32 @@ public class ASTree {
 
   private Set<String> identifierList = new HashSet<>();
 
+  @Override
+  public boolean equals(Object pO) {
+    if (this == pO) {
+      return true;
+    }
+    if (pO == null || getClass() != pO.getClass()) {
+      return false;
+    }
+
+    ASTree asTree = (ASTree)pO;
+
+    if (root != null ? !root.equals(asTree.root) : asTree.root != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return root != null ? root.hashCode() : 0;
+  }
+
   public ASTree(ASTNode pRoot) {
     this.tree.addVertex(pRoot);
+
     this.root = pRoot;
     reinitASTNodeDepth();
   }

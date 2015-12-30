@@ -28,6 +28,7 @@ import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.IntegerNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
@@ -35,7 +36,8 @@ import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Graphable;
 
-import org.jgrapht.ext.DOTExporter;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
 
 public class ASTCollectorState
@@ -104,6 +106,8 @@ public class ASTCollectorState
 
   private Set<CFAEdgeInfo> cfaEdgeInfoSet = new HashSet<>();
 
+  private Table<Integer, Integer, Boolean> assumptions = HashBasedTable.create();
+
   public final static ASTCollectorState TOP = new ASTCollectorState();
 
   private ASTCollectorState() {
@@ -137,11 +141,18 @@ public class ASTCollectorState
     return variables;
   }
 
+  public Table<Integer, Integer, Boolean> getAssumptions() {
+    return assumptions;
+  }
+
   private void addEdge(CFAEdge pCFAEdge, boolean assumption) {
+    int pre = pCFAEdge.getPredecessor().getNodeNumber();
+    int succ = pCFAEdge.getSuccessor().getNodeNumber();
     CFAEdgeInfo cfaEdgeInfo = new CFAEdgeInfo(
         pCFAEdge.getPredecessor().getNodeNumber(),
         pCFAEdge.getSuccessor().getNodeNumber(), assumption);
     this.cfaEdgeInfoSet.add(cfaEdgeInfo);
+    this.assumptions.put(pre, succ, assumption);
   }
 
   private void addEdge(CFAEdge pCFAEdge) {
