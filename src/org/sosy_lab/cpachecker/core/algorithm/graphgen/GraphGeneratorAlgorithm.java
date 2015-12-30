@@ -40,7 +40,10 @@ import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.GraphMLExporter;
 import org.jgrapht.ext.IntegerEdgeNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
+import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.jgrapht.graph.EdgeReversedGraph;
+import org.jgrapht.graph.SimpleDirectedGraph;
 import org.sosy_lab.common.configuration.FileOption;
 import org.sosy_lab.common.configuration.FileOption.Type;
 import org.sosy_lab.common.configuration.Options;
@@ -49,6 +52,7 @@ import org.sosy_lab.common.io.Path;
 import org.sosy_lab.common.io.Paths;
 import org.sosy_lab.common.log.LogManager;
 import org.sosy_lab.cpachecker.core.algorithm.Algorithm;
+import org.sosy_lab.cpachecker.core.algorithm.graphgen.utils.Dominators;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.ConfigurableProgramAnalysis;
 import org.sosy_lab.cpachecker.core.reachedset.ReachedSet;
@@ -102,6 +106,10 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   @FileOption(Type.OUTPUT_FILE)
   private Path nodeDepthOutputFile = Paths.get("output/node_depth.labels");
 
+  @Option(secure=true, name = "postDomTree", description = "Output file of the post dominator tree")
+  @FileOption(Type.OUTPUT_FILE)
+  private Path postDomTreeOutputFile = Paths.get("output/postdomtree.dot");
+
   public GraphGeneratorAlgorithm(Algorithm pAlgorithm, LogManager pLogger,
       ConfigurableProgramAnalysis pCpa) {
     logger = pLogger;
@@ -143,8 +151,9 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         if(!sourceNodeToRoot.containsKey(source))
           sourceNodeToRoot.put(source, s.getTree().getRoot());
       }
-      boolean modified = Graphs.addGraph(result, s.getTree().asGraph());
-      assert modified;
+      //boolean modified = Graphs.addGraph(result, s.getTree().asGraph());
+      //assert modified;
+      result.addVertex(s.getTree().getRoot());
     }
     // Add control-flow edges
     for(ASTCollectorState s : states) {
@@ -321,7 +330,45 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         removeASTFromGraph(graph, s.getTree(), false);
       }
     }
+  }
 
+  private void addControlDependencies(DirectedMultigraph<ASTNode, ASTEdge> pInputGraph) {
+    DirectedGraph<ASTNode, ASTEdge> graph = new EdgeReversedGraph<>(pInputGraph);
+    // Find entry node
+    ASTNode entry = null;
+    for(ASTNode node : graph.vertexSet()) {
+      if(graph.inDegreeOf(node) == 0) {
+        entry = node;
+        break;
+      }
+    }
+    assert entry != null;
+    Dominators<ASTNode, ASTEdge> dominators = new Dominators<>(graph, entry);
+    SimpleDirectedGraph<ASTNode, DefaultEdge> postdomTree = dominators.getDominatorTree();
+    DOTExporter<ASTNode, DefaultEdge> dotExp = new DOTExporter<>(
+        new VertexNameProvider<ASTNode>() {
+          @Override
+          public String getVertexName(ASTNode o) {
+            return String.valueOf(o.getId());
+          }
+        },
+        new VertexNameProvider<ASTNode>() {
+          @Override
+          public String getVertexName(ASTNode o) {
+            return String.valueOf(o.getId());
+          }
+        },
+        new EdgeNameProvider<DefaultEdge>() {
+          @Override
+          public String getEdgeName(DefaultEdge o) {
+            return "";
+          }
+        });
+    try {
+      dotExp.export(new FileWriter(postDomTreeOutputFile.getPath()), postdomTree);
+    } catch (IOException e) {
+      logger.logException(Level.ALL, e, "Cannot write DOT");
+    }
   }
 
 //  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
@@ -439,7 +486,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
     pruneBlankNodes(graph);
-
+    addControlDependencies(graph);
 
     // Export graph
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
