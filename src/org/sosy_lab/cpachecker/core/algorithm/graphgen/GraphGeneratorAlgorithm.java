@@ -42,6 +42,7 @@ import org.jgrapht.ext.IntegerEdgeNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.jgrapht.graph.DirectedPseudograph;
 import org.jgrapht.graph.EdgeReversedGraph;
 import org.jgrapht.graph.SimpleDirectedGraph;
 import org.sosy_lab.common.configuration.FileOption;
@@ -69,8 +70,11 @@ import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+
+import edu.umd.cs.findbugs.graph.Graph;
 
 /**
  * Created by zenscr on 26/11/15.
@@ -120,7 +124,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * Prunes all nodes from a graph, which are associated with the label BLANK
    * @param pGraph
    */
-  private void pruneBlankNodes(DirectedMultigraph<ASTNode, ASTEdge> pGraph) {
+  private void pruneBlankNodes(DirectedPseudograph<ASTNode, ASTEdge> pGraph) {
     Set<ASTNode> nodesToRemove = new HashSet<>();
     // add control flow edge between sources and targets of blank nodes
     for(ASTNode node : pGraph.vertexSet()) {
@@ -138,8 +142,8 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param states
    * @return
    */
-  private DirectedMultigraph<ASTNode, ASTEdge> generateCFGFromStates(Set<ASTCollectorState> states) {
-    DirectedMultigraph<ASTNode, ASTEdge> result = new DirectedMultigraph<>(ASTEdge.class);
+  private DirectedPseudograph<ASTNode, ASTEdge> generateCFGFromStates(Set<ASTCollectorState> states) {
+    DirectedPseudograph<ASTNode, ASTEdge> result = new DirectedPseudograph<>(ASTEdge.class);
     Map<Integer, ASTNode> sourceNodeToRoot = new HashMap<>();
     // Add all the ASTs to the graph
     for(ASTCollectorState s : states) {
@@ -171,6 +175,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         } else {
           // do nothing
         }
+
       }
     }
     return result;
@@ -180,7 +185,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * Writes a file containing a list of node id - label pairs
    * @param graph
    */
-  private void exportNodeLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+  private void exportNodeLabels(DirectedPseudograph<ASTNode, ASTEdge> graph) {
     PrintWriter wtr = null;
     try {
       wtr = new PrintWriter(nodeLabelsOutputFile.getPath());
@@ -202,12 +207,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * Writes a file containing edge - type pairs
    * @param graph
    */
-  private void exportEdgeTypeLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+  private void exportEdgeTypeLabels(DirectedPseudograph<ASTNode, ASTEdge> graph) {
     PrintWriter wtr = null;
     try {
       wtr = new PrintWriter(edgeTypesOutputFile.getPath());
       for(ASTEdge edge : graph.edgeSet()) {
-        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getAstEdgeLabel().getValue()));
+        wtr.println(String.format("%s,%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getId(), edge.getAstEdgeLabel().getValue()));
       }
     } catch (FileNotFoundException pE) {
       pE.printStackTrace();
@@ -220,12 +225,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * Writes a file containing edge - truth value (CFG) pairs
    * @param graph
    */
-  private void exportEdgeTruthLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+  private void exportEdgeTruthLabels(DirectedPseudograph<ASTNode, ASTEdge> graph) {
     PrintWriter wtr = null;
     try {
       wtr = new PrintWriter(edgeTruthOutputFile.getPath());
       for(ASTEdge edge : graph.edgeSet()) {
-        wtr.println(String.format("%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getTruthLabel().getValue()));
+        wtr.println(String.format("%s,%s,%s,%s", edge.getSourceNode().getId(), edge.getTargetNode().getId(), edge.getId(), edge.getTruthLabel().getValue()));
       }
     } catch (FileNotFoundException pE) {
       pE.printStackTrace();
@@ -238,7 +243,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * Writes a file containing node - depth pairs
    * @param graph
    */
-  private void exportNodeDepthLabels(DirectedMultigraph<ASTNode, ASTEdge> graph) {
+  private void exportNodeDepthLabels(DirectedPseudograph<ASTNode, ASTEdge> graph) {
     PrintWriter wtr = null;
     try {
       wtr = new PrintWriter(nodeDepthOutputFile.getPath());
@@ -257,7 +262,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param graph
    * @param tree
    */
-  private void removeASTFromGraph(DirectedMultigraph<ASTNode, ASTEdge> graph, ASTree tree, boolean ignoreOutgoing) {
+  private void removeASTFromGraph(DirectedPseudograph<ASTNode, ASTEdge> graph, ASTree tree, boolean ignoreOutgoing) {
 
     ASTNode root = tree.getRoot();
     Set<ASTEdge> incomingEdges = graph.incomingEdgesOf(root);
@@ -300,7 +305,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param nonGlobalStates
    */
   private void pruneUnusedGlobalDeclarations(
-      DirectedMultigraph<ASTNode, ASTEdge> graph,
+      DirectedPseudograph<ASTNode, ASTEdge> graph,
       Set<ASTCollectorState> globalStates,
       Set<ASTCollectorState> nonGlobalStates) {
 
@@ -332,7 +337,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
   }
 
-  private void addControlDependencies(DirectedMultigraph<ASTNode, ASTEdge> pInputGraph) {
+  private void addControlDependencies(DirectedPseudograph<ASTNode, ASTEdge> pInputGraph) {
     DirectedGraph<ASTNode, ASTEdge> graph = new EdgeReversedGraph<>(pInputGraph);
     // Find entry node
     ASTNode entry = null;
@@ -343,33 +348,60 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       }
     }
     assert entry != null;
+    Set<ASTEdge> controlDependences = new HashSet<>();
     Dominators<ASTNode, ASTEdge> dominators = new Dominators<>(graph, entry);
-    SimpleDirectedGraph<ASTNode, DefaultEdge> postdomTree = dominators.getDominatorTree();
-    DOTExporter<ASTNode, DefaultEdge> dotExp = new DOTExporter<>(
-        new VertexNameProvider<ASTNode>() {
-          @Override
-          public String getVertexName(ASTNode o) {
-            return String.valueOf(o.getId());
+    DirectedGraph<ASTNode, DefaultEdge> pdt = dominators.getDominatorTree();
+    for(ASTEdge e : pInputGraph.edgeSet()) {
+      if(!dominators.dominates(e.getTargetNode(), e.getSourceNode())
+          && pdt.incomingEdgesOf(e.getTargetNode()).iterator().hasNext()) {
+
+        Set<DefaultEdge> sourceIncoming =
+            pdt.incomingEdgesOf(e.getSourceNode());
+        ASTNode parent = null;
+        if (sourceIncoming.isEmpty()) {
+          // set root as parent
+          for (ASTNode n : pdt.vertexSet()) {
+            if (pdt.inDegreeOf(n) == 0) {
+              parent = n;
+              break;
+            }
           }
-        },
-        new VertexNameProvider<ASTNode>() {
-          @Override
-          public String getVertexName(ASTNode o) {
-            return String.valueOf(o.getId());
-          }
-        },
-        new EdgeNameProvider<DefaultEdge>() {
-          @Override
-          public String getEdgeName(DefaultEdge o) {
-            return "";
-          }
-        });
-    try {
-      dotExp.export(new FileWriter(postDomTreeOutputFile.getPath()), postdomTree);
-    } catch (IOException e) {
-      logger.logException(Level.ALL, e, "Cannot write DOT");
+        } else {
+          parent = pdt.getEdgeSource(sourceIncoming.iterator().next());
+        }
+        assert parent != null;
+        // traverse backwards in tree
+        ASTNode current = e.getTargetNode();
+        ASTNode pred =
+            pdt.getEdgeSource(pdt.incomingEdgesOf(current).iterator().next());
+        ASTEdge cdEdge = new ASTEdge(e.getSourceNode(), current,
+            ASTEdgeLabel.CONTROL_DEPENDENCE);
+        cdEdge.setTruthValue(e.getTruthValue());
+        controlDependences.add(cdEdge);
+        while(pred != parent) {
+          current = pred;
+          pred =
+              pdt.getEdgeSource(pdt.incomingEdgesOf(current).iterator().next());
+          cdEdge = new ASTEdge(e.getSourceNode(), current,
+              ASTEdgeLabel.CONTROL_DEPENDENCE);
+          cdEdge.setTruthValue(e.getTruthValue());
+          controlDependences.add(cdEdge);
+        }
+      }
+    }
+    for(ASTEdge cdEdge : controlDependences) {
+      pInputGraph.addEdge(cdEdge.getSourceNode(), cdEdge.getTargetNode(), cdEdge);
     }
   }
+
+  private void addASTsToGraph(
+      DirectedPseudograph<ASTNode, ASTEdge> graph,
+      Set<ASTCollectorState> states) {
+    for(ASTCollectorState s : states) {
+      Graphs.addGraph(graph, s.getTree().asGraph());
+    }
+  }
+
 
 //  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
 //      DirectedMultigraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
@@ -482,11 +514,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
 
     // Create graph representation
-    DirectedMultigraph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
-    pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
+    DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(states);
+//    pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
+//    pruneBlankNodes(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    pruneBlankNodes(graph);
-    addControlDependencies(graph);
+    //addControlDependencies(graph);
+    //addASTsToGraph(graph, states);
 
     // Export graph
     DOTExporter<ASTNode, ASTEdge> dotExp = new DOTExporter<>(
@@ -527,7 +560,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
             return o.toString();
           }
         },
-        new IntegerEdgeNameProvider(),
+        new EdgeNameProvider<ASTEdge>() {
+          @Override
+          public String getEdgeName(ASTEdge pASTEdge) {
+            return String.valueOf(pASTEdge.getId());
+          }
+        },
         new EdgeNameProvider<ASTEdge>() {
           @Override
           public String getEdgeName(ASTEdge o) {

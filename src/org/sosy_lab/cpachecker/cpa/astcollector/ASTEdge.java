@@ -33,6 +33,10 @@ import org.jgrapht.graph.DefaultEdge;
  */
 public class ASTEdge extends DefaultEdge {
 
+  private static int idCounter = 0;
+
+  private final int id;
+
   private final ASTNode sourceNode;
 
   private final ASTNode targetNode;
@@ -42,6 +46,8 @@ public class ASTEdge extends DefaultEdge {
   private boolean truthValue = true;
 
   public ASTEdge(ASTNode pSourceNode, ASTNode pTargetNode, ASTEdgeLabel pEdgeLabel) {
+    id = idCounter;
+    idCounter++;
     this.sourceNode = pSourceNode;
     this.targetNode = pTargetNode;
     this.astEdgeLabel = pEdgeLabel;
@@ -68,6 +74,10 @@ public class ASTEdge extends DefaultEdge {
       return ASTEdgeLabel.TRUE;
     else
       return ASTEdgeLabel.FALSE;
+  }
+
+  public int getId() {
+    return id;
   }
 
   public boolean equalAttributes(ASTEdge edge) {

@@ -42,6 +42,12 @@ public class ASTNode {
   public ASTNode(ASTNodeLabel pLabel) {
     this();
     this.labels.add(pLabel);
+
+    // start node contains special label
+    if(id == 0) {
+      this.labels.clear();
+      this.addLabel(ASTNodeLabel.START);
+    }
   }
 
   public ASTNode() {
@@ -87,7 +93,7 @@ public class ASTNode {
     for (ASTNodeLabel label : labels) {
       labelList.append(label.name() + "_");
     }
-    return new String(labelList.deleteCharAt(labelList.length() - 1)) + " (" + depth +")";
+    return new String(labelList.deleteCharAt(labelList.length() - 1)) + " (" + depth + "," + getId() + ")";
   }
 
   @Override

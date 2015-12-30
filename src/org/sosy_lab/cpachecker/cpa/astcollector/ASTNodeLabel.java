@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 public enum ASTNodeLabel implements Serializable {
 
   // New
+  START,
   PROBLEM_TYPE,
   LOOP,
   BRANCH,
