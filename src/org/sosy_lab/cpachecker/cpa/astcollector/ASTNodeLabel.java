@@ -28,6 +28,8 @@ import java.io.Serializable;
 public enum ASTNodeLabel implements Serializable {
 
   // New
+  INITIALIZER_LIST,
+  INITIALIZER,
   START,
   END,
   PROBLEM_TYPE,

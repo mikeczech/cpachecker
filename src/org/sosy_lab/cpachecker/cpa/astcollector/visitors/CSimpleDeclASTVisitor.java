@@ -23,8 +23,6 @@
  */
 package org.sosy_lab.cpachecker.cpa.astcollector.visitors;
 
-import java.util.Map;
-
 import org.sosy_lab.cpachecker.cfa.ast.c.CComplexTypeDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionDeclaration;
 import org.sosy_lab.cpachecker.cfa.ast.c.CParameterDeclaration;
@@ -34,15 +32,13 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CVariableDeclaration;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
 import org.sosy_lab.cpachecker.cfa.types.c.CEnumType.CEnumerator;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorUtils;
-import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 /**
  * Created by zenscr on 30/09/15.
@@ -105,7 +101,10 @@ public class CSimpleDeclASTVisitor
     ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.VARIABLE_DECL), pDecl.getName());
     ASTree typeTree = pDecl.getType().accept(new CTypeASTVisitor(this.cfaEdge));
     tree.addTree(typeTree);
-    // Todo: add initializer
+    if(pDecl.getInitializer() != null) {
+      ASTree initializerTree = pDecl.getInitializer().accept(new CInitializerASTVisitor(this.cfaEdge));
+      tree.addTree(initializerTree, new ASTNode(ASTNodeLabel.INITIALIZER));
+    }
     return tree;
   }
 

@@ -29,21 +29,20 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CInitializerExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CInitializerList;
 import org.sosy_lab.cpachecker.cfa.ast.c.CInitializerVisitor;
 import org.sosy_lab.cpachecker.cfa.model.CFAEdge;
-import org.sosy_lab.cpachecker.cpa.cfalabels.ASTree;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNode;
-import org.sosy_lab.cpachecker.cpa.cfalabels.GMNodeLabel;
-import org.sosy_lab.cpachecker.cpa.cfalabels.visitors.CExpressionLabelVisitor;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
+import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCCodeException;
 
 /**
  * Created by zenscr on 01/12/15.
  */
-public class CInitializerLabelsVisitor implements CInitializerVisitor<ASTree, CPATransferException> {
+public class CInitializerASTVisitor implements CInitializerVisitor<ASTree, CPATransferException> {
 
   private final CFAEdge cfaEdge;
 
-  public CInitializerLabelsVisitor(
+  public CInitializerASTVisitor(
       CFAEdge pCfaEdge) {
     cfaEdge = pCfaEdge;
   }
@@ -51,13 +50,13 @@ public class CInitializerLabelsVisitor implements CInitializerVisitor<ASTree, CP
   @Override
   public ASTree visit(CInitializerExpression pInitializerExpression)
       throws CPATransferException {
-    return pInitializerExpression.getExpression().accept(new CExpressionLabelVisitor(this.cfaEdge));
+    return pInitializerExpression.getExpression().accept(new CExpressionASTVisitor(this.cfaEdge));
   }
 
   @Override
   public ASTree visit(CInitializerList pInitializerList)
       throws CPATransferException {
-    ASTree tree = new ASTree(new GMNode(GMNodeLabel.INITIALIZER_LIST));
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.INITIALIZER_LIST));
     for(CInitializer initializer : pInitializerList.getInitializers()) {
       tree.addTree(initializer.accept(this));
     }
