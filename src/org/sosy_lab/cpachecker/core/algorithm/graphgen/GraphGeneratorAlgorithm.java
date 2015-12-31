@@ -71,6 +71,7 @@ import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationExc
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
 
 /**
@@ -84,6 +85,8 @@ public class GraphGeneratorAlgorithm implements Algorithm {
   private final Algorithm algorithm;
 
   private final CFA cfa;
+
+  private final Set<ASTNodeLabel> programEndLabels = ImmutableSet.of(ASTNodeLabel.FUNC_CALL, ASTNodeLabel.VERIFIER_ERROR);
 
   @Option(secure=true, name = "graphOutputFile", description = "Output file of Graph Representation (DOT)")
   @FileOption(Type.OUTPUT_FILE)
@@ -188,16 +191,35 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       }
     }
 
-    // find nodes with out degree zero and connect them with an end node
+    // find nodes with out degree zero or error label and connect them with an end node
     ASTNode endNode = new ASTNode(ASTNodeLabel.END);
     result.addVertex(endNode);
+    Set<ASTEdge> edgesToDelete = new HashSet<>();
     for(ASTNode n : result.vertexSet()) {
-      if(result.outDegreeOf(n) == 0 && n != endNode) {
+      if((result.outDegreeOf(n) == 0 || n.getLabels().containsAll(programEndLabels)) && n != endNode) {
+
+        for(ASTEdge e : result.outgoingEdgesOf(n))
+          edgesToDelete.add(e);
+
         ASTEdge edge = new ASTEdge(n, endNode,
             ASTEdgeLabel.CONTROL_FLOW);
         result.addEdge(n, endNode, edge);
       }
     }
+    result.removeAllEdges(edgesToDelete);
+    assert result.inDegreeOf(endNode) != 0;
+
+    // Add dummy edge to force multigraph in graphml (workaround) Todo find a better solution!
+    ASTNode entryNode = null;
+    for(ASTNode n : result.vertexSet()) {
+      if(result.inDegreeOf(n) == 0) {
+        entryNode = n;
+      }
+    }
+    assert entryNode.getLabels().contains(ASTNodeLabel.START);
+    ASTNode entrySucc = result.outgoingEdgesOf(entryNode).iterator().next().getTargetNode();
+    ASTEdge dummyEdge = new ASTEdge(entryNode, entrySucc, ASTEdgeLabel.DUMMY);
+    result.addEdge(entryNode, entrySucc, dummyEdge);
     return result;
   }
 
@@ -368,6 +390,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
     assert zeroOutNodes.size() == 1;
     ASTNode entry = zeroOutNodes.iterator().next();
+    assert entry.getLabels().contains(ASTNodeLabel.END);
 
     Set<ASTEdge> controlDependences = new HashSet<>();
     Dominators<ASTNode, ASTEdge> dominators = new Dominators<>(graph, entry);
@@ -532,7 +555,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     Set<ASTCollectorState> states = new HashSet<>(edgeToState.values());
     // Create graph representation
     DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
-//    pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
+    //pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
 //    pruneBlankNodes(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
     addControlDependencies(graph);

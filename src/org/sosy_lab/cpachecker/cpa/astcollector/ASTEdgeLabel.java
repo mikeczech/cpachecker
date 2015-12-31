@@ -32,7 +32,9 @@ public enum ASTEdgeLabel implements Serializable {
   SYNTACTIC(4),
 
   TRUE(5),
-  FALSE(6);
+  FALSE(6),
+
+  DUMMY(7);
 
   private final int value;
 
