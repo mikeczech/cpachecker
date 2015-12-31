@@ -204,22 +204,15 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         ASTEdge edge = new ASTEdge(n, endNode,
             ASTEdgeLabel.CONTROL_FLOW);
         result.addEdge(n, endNode, edge);
+        // Add dummy edge to force multigraph in graphml (workaround) Todo find a better solution!
+        ASTEdge dummyEdge = new ASTEdge(n, endNode,
+            ASTEdgeLabel.DUMMY);
+        result.addEdge(n, endNode, dummyEdge);
       }
     }
     result.removeAllEdges(edgesToDelete);
     assert result.inDegreeOf(endNode) != 0;
 
-    // Add dummy edge to force multigraph in graphml (workaround) Todo find a better solution!
-    ASTNode entryNode = null;
-    for(ASTNode n : result.vertexSet()) {
-      if(result.inDegreeOf(n) == 0) {
-        entryNode = n;
-      }
-    }
-    assert entryNode.getLabels().contains(ASTNodeLabel.START);
-    ASTNode entrySucc = result.outgoingEdgesOf(entryNode).iterator().next().getTargetNode();
-    ASTEdge dummyEdge = new ASTEdge(entryNode, entrySucc, ASTEdgeLabel.DUMMY);
-    result.addEdge(entryNode, entrySucc, dummyEdge);
     return result;
   }
 

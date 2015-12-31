@@ -75,6 +75,10 @@ public class ASTNode {
     return false;
   }
 
+  public boolean isStart() {
+    return labels.contains(ASTNodeLabel.START);
+  }
+
   public boolean isGlobal() {
     return labels.contains(ASTNodeLabel.GLOBAL);
   }
