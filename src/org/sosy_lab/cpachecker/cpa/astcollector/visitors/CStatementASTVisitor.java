@@ -23,7 +23,6 @@
  */
 package org.sosy_lab.cpachecker.cpa.astcollector.visitors;
 
-import org.eclipse.jdt.core.dom.AST;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpression;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionAssignmentStatement;
 import org.sosy_lab.cpachecker.cfa.ast.c.CExpressionStatement;
@@ -75,17 +74,10 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
   @Override public ASTree visit(
       CFunctionCallAssignmentStatement pIastFunctionCallAssignmentStatement)
       throws CPATransferException {
-    Optional<ASTNodeLabel> specialLabel = Optional.absent();
-    ASTree tree;
-    if(pIastFunctionCallAssignmentStatement.getFunctionCallExpression().getDeclaration() != null) {
-      specialLabel = ASTCollectorUtils.getSpecialLabel(
-          pIastFunctionCallAssignmentStatement.getFunctionCallExpression()
-              .getDeclaration().getName());
-      tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL),
-        pIastFunctionCallAssignmentStatement.getFunctionCallExpression().getDeclaration().getName());
-    } else {
-      tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
-    }
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(
+        pIastFunctionCallAssignmentStatement.getFunctionCallExpression()
+            .getFunctionNameExpression().toString());
 
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
@@ -109,17 +101,10 @@ public class CStatementASTVisitor implements CStatementVisitor<ASTree, CPATransf
   @Override
   public ASTree visit(CFunctionCallStatement pIastFunctionCallStatement)
       throws CPATransferException {
-    Optional<ASTNodeLabel> specialLabel = Optional.absent();
-    ASTree tree;
-    if(pIastFunctionCallStatement.getFunctionCallExpression().getDeclaration() != null) {
-      specialLabel = ASTCollectorUtils.getSpecialLabel(
-          pIastFunctionCallStatement.getFunctionCallExpression()
-              .getDeclaration().getName());
-      tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL),
-          pIastFunctionCallStatement.getFunctionCallExpression().getDeclaration().getName());
-    } else {
-      tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
-    }
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.FUNC_CALL));
+    Optional<ASTNodeLabel> specialLabel = ASTCollectorUtils.getSpecialLabel(
+        pIastFunctionCallStatement.getFunctionCallExpression()
+            .getFunctionNameExpression().toString());
     ASTNode root = tree.getRoot();
     if(specialLabel.isPresent())
       root.addLabel(specialLabel.get());

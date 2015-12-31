@@ -35,6 +35,7 @@ import java.util.logging.Level;
 
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graphs;
+import org.jgrapht.alg.StrongConnectivityInspector;
 import org.jgrapht.ext.DOTExporter;
 import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.GraphMLExporter;
@@ -204,13 +205,35 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         ASTEdge edge = new ASTEdge(n, endNode,
             ASTEdgeLabel.CONTROL_FLOW);
         result.addEdge(n, endNode, edge);
-        // Add dummy edge to force multigraph in graphml (workaround) Todo find a better solution!
+        // Add dummy edge to enforce multigraph in graphml (workaround) Todo find a better solution!
         ASTEdge dummyEdge = new ASTEdge(n, endNode,
             ASTEdgeLabel.DUMMY);
         result.addEdge(n, endNode, dummyEdge);
       }
     }
     result.removeAllEdges(edgesToDelete);
+    // If there are infinite cycles in the cfg, then find sccs and connect some node from them with the end node (dummy edge)
+    StrongConnectivityInspector<ASTNode, ASTEdge> sccInsp =
+        new StrongConnectivityInspector<>(result);
+    for(Set<ASTNode> scc : sccInsp.stronglyConnectedSets()) {
+
+      if(scc.size() < 2)
+        continue;
+
+      ASTNode source = null;
+      for(ASTNode n : scc) {
+        if(result.outDegreeOf(n) < 2) {
+          source = n;
+          break;
+        }
+      }
+      assert source != null;
+      ASTEdge edge = new ASTEdge(source, endNode,
+          ASTEdgeLabel.DUMMY);
+      edge.setTruthValue(false);
+      result.addEdge(source, endNode, edge);
+    }
+
     assert result.inDegreeOf(endNode) != 0;
 
     return result;
@@ -330,46 +353,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     graph.removeAllVertices(tree.asGraph().vertexSet());
     graph.removeAllEdges(incomingEdges);
     graph.removeAllEdges(outgoingEdges);
-  }
-
-  /**
-   * Prunes global declarations which are neither used locally nor within other
-   * global declarations. (it slightly reduces some graphs, but its not perfect though)
-   * @param graph
-   * @param globalStates
-   * @param nonGlobalStates
-   */
-  private void pruneUnusedGlobalDeclarations(
-      DirectedPseudograph<ASTNode, ASTEdge> graph,
-      Set<ASTCollectorState> globalStates,
-      Set<ASTCollectorState> nonGlobalStates) {
-
-    Set<String> localIdentifiers = new HashSet<>();
-    for(ASTCollectorState s : nonGlobalStates) {
-        localIdentifiers.addAll(s.getTree().getIdentifiers());
-    }
-
-    for(ASTCollectorState s : globalStates) {
-      boolean dependOnGlobal = false;
-      for(ASTCollectorState ss : globalStates) {
-        if(ss != s) {
-          for(String id : s.getTree().getIdentifiers()) {
-            if(ss.getTree().getIdentifiers().contains(id)) {
-              dependOnGlobal = true;
-              break;
-            }
-          }
-        }
-        if(dependOnGlobal)
-          break;
-      }
-      if(dependOnGlobal)
-        continue;
-      Set<String> globalIdentifiers = s.getTree().getIdentifiers();
-      if(!localIdentifiers.containsAll(globalIdentifiers)) {
-        removeASTFromGraph(graph, s.getTree(), false);
-      }
-    }
   }
 
   private void addControlDependencies(DirectedPseudograph<ASTNode, ASTEdge> pInputGraph) {
@@ -513,9 +496,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     logger.log(Level.INFO, "Graph generator algorithm started.");
 
     // Fill data structures
-    Set<ASTCollectorState> globalDeclStates = new HashSet<>();
-    Set<ASTCollectorState> nonGlobalDeclStates = new HashSet<>();
-
     Table<Integer, Integer, ASTCollectorState> edgeToState = HashBasedTable.create();
     Map<Integer, Set<AbstractState>> locToAbstractState = new HashMap<>();
 
@@ -529,10 +509,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           ASTCollectorState gmState = (ASTCollectorState)child;
           for(CFAEdgeInfo e : gmState.getCfaEdgeInfoSet())
             edgeToState.put(e.getSource(), e.getTarget(), gmState);
-          if(gmState.getTree().isGlobal())
-            globalDeclStates.add(gmState);
-          else
-            nonGlobalDeclStates.add(gmState);
         }
 
         if(child instanceof LocationState) {
@@ -548,10 +524,9 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     Set<ASTCollectorState> states = new HashSet<>(edgeToState.values());
     // Create graph representation
     DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
-    //pruneUnusedGlobalDeclarations(graph, globalDeclStates, nonGlobalDeclStates);
 //    pruneBlankNodes(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    addControlDependencies(graph);
+    //addControlDependencies(graph);
     addASTsToGraph(graph, states);
 
     // Export graph
