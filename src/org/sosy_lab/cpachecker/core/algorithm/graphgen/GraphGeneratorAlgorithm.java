@@ -526,7 +526,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
 //    pruneBlankNodes(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    //addControlDependencies(graph);
+    addControlDependencies(graph);
     addASTsToGraph(graph, states);
 
     // Export graph
