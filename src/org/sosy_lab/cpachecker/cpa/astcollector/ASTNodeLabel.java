@@ -28,13 +28,14 @@ import java.io.Serializable;
 public enum ASTNodeLabel implements Serializable {
 
   // New
+  LOOP_ENTRY,
   INITIALIZER_LIST,
   INITIALIZER,
   START,
   END,
   PROBLEM_TYPE,
-  LOOP,
-  BRANCH,
+  LOOP_CONDITION,
+  BRANCH_CONDITION,
   ARGUMENTS,
   CONDITION,
   VARIABLE_DECL,

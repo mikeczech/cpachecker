@@ -50,7 +50,8 @@ public class ASTree {
 
   public ASTree(ASTNode pRoot, String identifier) {
     this(pRoot);
-    identifierList.add(identifier);
+    if(identifier != null)
+      identifierList.add(identifier);
   }
 
   public ASTree() { }

@@ -24,10 +24,8 @@
 package org.sosy_lab.cpachecker.cpa.astcollector;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.sosy_lab.common.log.LogManager;
@@ -49,7 +47,6 @@ import org.sosy_lab.cpachecker.core.defaults.ForwardingTransferRelation;
 import org.sosy_lab.cpachecker.core.defaults.SingletonPrecision;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.Precision;
-import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState.CFAEdgeInfo;
 import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CExpressionASTVisitor;
 import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CSimpleDeclASTVisitor;
 import org.sosy_lab.cpachecker.cpa.astcollector.visitors.CStatementASTVisitor;
@@ -59,8 +56,6 @@ import org.sosy_lab.cpachecker.exceptions.CPATransferException;
 import org.sosy_lab.cpachecker.exceptions.UnsupportedCodeException;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 
 public class ASTCollectorTransferRelation extends ForwardingTransferRelation<ASTCollectorState, ASTCollectorState, SingletonPrecision> {
@@ -74,9 +69,9 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
 
   public static ASTNodeLabel extractControlLabel(CFAEdge pCFAEdge) {
     if(pCFAEdge.getPredecessor().isLoopStart()) {
-      return ASTNodeLabel.LOOP;
+      return ASTNodeLabel.LOOP_CONDITION;
     }
-    return ASTNodeLabel.BRANCH;
+    return ASTNodeLabel.BRANCH_CONDITION;
   }
 
   @Override
@@ -162,8 +157,13 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
 
   @Override
   protected ASTCollectorState handleBlankEdge(BlankEdge cfaEdge) {
+    ASTNodeLabel label;
+    if(cfaEdge.getDescription() == "while" || cfaEdge.getDescription() == "for" || cfaEdge.getDescription() == "do")
+      label = ASTNodeLabel.LOOP_ENTRY;
+    else
+      label = ASTNodeLabel.BLANK;
     ASTree
-        blankTree = new ASTree(new ASTNode(ASTNodeLabel.BLANK));
+        blankTree = new ASTree(new ASTNode(label));
     return new ASTCollectorState(cfaEdge, blankTree);
   }
 

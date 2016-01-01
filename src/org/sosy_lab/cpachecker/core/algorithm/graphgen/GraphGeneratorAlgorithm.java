@@ -144,10 +144,8 @@ public class GraphGeneratorAlgorithm implements Algorithm {
           Set<ASTEdge> incomingEdges = pGraph.incomingEdgesOf(node);
           Set<ASTEdge> outgoingEdges = pGraph.outgoingEdgesOf(node);
 
-          assert outgoingEdges.size() <= 1;
-          if(!outgoingEdges.isEmpty()) {
-            ASTNode target = outgoingEdges.iterator().next().getTargetNode();
-
+          for(ASTEdge out : outgoingEdges) {
+            ASTNode target = out.getTargetNode();
             for(ASTEdge incoming : incomingEdges) {
               ASTNode source = incoming.getSourceNode();
               ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
@@ -163,6 +161,13 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       else
         break;
     }
+    Set<ASTNode> floatingNodes = new HashSet<>();
+    // remove all nodes which have an outgoing edge, but no incoming (except the start node)
+    for(ASTNode node : pGraph.vertexSet()) {
+      if(!node.isStart() && pGraph.inDegreeOf(node) == 0)
+        floatingNodes.add(node);
+    }
+    pGraph.removeAllVertices(floatingNodes);
   }
 
   /**
@@ -206,13 +211,15 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       int source = e.getPredecessor().getNodeNumber();
       int target = e.getSuccessor().getNodeNumber();
       ASTNode sourceNode = edgeToState.get(source, target).getTree().getRoot();
-      if(sourceToStates.containsKey(target)) {
-        for(ASTCollectorState s : sourceToStates.get(target)) {
-          ASTNode targetNode = s.getTree().getRoot();
-          ASTEdge edge = new ASTEdge(sourceNode, targetNode,
-              ASTEdgeLabel.CONTROL_FLOW);
-          edge.setTruthValue(edgeToState.get(source, target).getAssumptions().get(source, target));
-          result.addEdge(sourceNode, targetNode, edge);
+      if(!sourceNode.getLabels().containsAll(programEndLabels)) {
+        if(sourceToStates.containsKey(target)) {
+          for(ASTCollectorState s : sourceToStates.get(target)) {
+            ASTNode targetNode = s.getTree().getRoot();
+            ASTEdge edge = new ASTEdge(sourceNode, targetNode,
+                ASTEdgeLabel.CONTROL_FLOW);
+            edge.setTruthValue(edgeToState.get(source, target).getAssumptions().get(source, target));
+            result.addEdge(sourceNode, targetNode, edge);
+          }
         }
       }
     }

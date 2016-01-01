@@ -209,10 +209,6 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
       root.addLabel(ASTNodeLabel.LONG);
     if(pSimpleType.isLongLong())
       root.addLabel(ASTNodeLabel.LONGLONG);
-    if(pSimpleType.isShort())
-      root.addLabel(ASTNodeLabel.SHORT);
-    if(pSimpleType.isVolatile())
-      root.addLabel(ASTNodeLabel.VOLATILE);
     if(pSimpleType.isUnsigned())
       root.addLabel(ASTNodeLabel.UNSIGNED);
 
@@ -233,6 +229,22 @@ public class CTypeASTVisitor implements CTypeVisitor<ASTree, CPATransferExceptio
         root.addLabel(ASTNodeLabel.DOUBLE);
         break;
       default:
+        if(pSimpleType.isLong()) {
+          root.addLabel(ASTNodeLabel.LONG);
+          break;
+        }
+        if(pSimpleType.isLongLong()) {
+          root.addLabel(ASTNodeLabel.LONGLONG);
+          break;
+        }
+        if(pSimpleType.isUnsigned()) {
+          root.addLabel(ASTNodeLabel.UNSIGNED);
+          break;
+        }
+        if(pSimpleType.isShort()) {
+          root.addLabel(ASTNodeLabel.SHORT);
+          break;
+        }
         throw new UnsupportedCCodeException("Unspecified declaration type: CSimpleType", this.cfaEdge);
     }
     return tree;
