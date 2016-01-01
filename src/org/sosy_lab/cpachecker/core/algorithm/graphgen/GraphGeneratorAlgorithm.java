@@ -221,17 +221,28 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         continue;
 
       ASTNode source = null;
+      boolean terminate = false;
       for(ASTNode n : scc) {
+
+        for(ASTEdge e : result.outgoingEdgesOf(n)) {
+          if(!scc.contains(e.getTargetNode())) {
+            terminate = true;
+            break;
+          }
+        }
+        if(terminate)
+          break;
+
         if(result.outDegreeOf(n) < 2) {
           source = n;
-          break;
         }
       }
-      assert source != null;
-      ASTEdge edge = new ASTEdge(source, endNode,
-          ASTEdgeLabel.DUMMY);
-      edge.setTruthValue(false);
-      result.addEdge(source, endNode, edge);
+      if(!terminate) {
+        assert source != null;
+        ASTEdge edge = new ASTEdge(source, endNode,
+            ASTEdgeLabel.DUMMY);
+        result.addEdge(source, endNode, edge);
+      }
     }
 
     assert result.inDegreeOf(endNode) != 0;
@@ -526,7 +537,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
 //    pruneBlankNodes(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    addControlDependencies(graph);
+    //addControlDependencies(graph);
     addASTsToGraph(graph, states);
 
     // Export graph
