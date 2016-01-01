@@ -27,11 +27,14 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
+
+import javax.annotation.Nullable;
 
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graphs;
@@ -71,6 +74,8 @@ import org.sosy_lab.cpachecker.cpa.location.LocationState;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
@@ -129,15 +134,35 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param pGraph
    */
   private void pruneBlankNodes(DirectedPseudograph<ASTNode, ASTEdge> pGraph) {
-    Set<ASTNode> nodesToRemove = new HashSet<>();
     // add control flow edge between sources and targets of blank nodes
-    for(ASTNode node : pGraph.vertexSet()) {
-      if(node.isBlank()) {
-        nodesToRemove.add(node);
+    // hacky solution. Todo fix this
+    while(true) {
+      ASTNode nodeToRemove = null;
+      for(ASTNode node : pGraph.vertexSet()) {
+        if(node.isBlank()) {
+          nodeToRemove = node;
+          Set<ASTEdge> incomingEdges = pGraph.incomingEdgesOf(node);
+          Set<ASTEdge> outgoingEdges = pGraph.outgoingEdgesOf(node);
+
+          assert outgoingEdges.size() <= 1;
+          if(!outgoingEdges.isEmpty()) {
+            ASTNode target = outgoingEdges.iterator().next().getTargetNode();
+
+            for(ASTEdge incoming : incomingEdges) {
+              ASTNode source = incoming.getSourceNode();
+              ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
+              newEdge.setTruthValue(incoming.getTruthValue());
+              pGraph.addEdge(source, target, newEdge);
+            }
+          }
+          break;
+        }
       }
+      if(nodeToRemove != null)
+        pGraph.removeVertex(nodeToRemove);
+      else
+        break;
     }
-    for(ASTNode node : nodesToRemove)
-      removeASTFromGraph(pGraph, new ASTree(node), true);
   }
 
   /**
@@ -192,29 +217,35 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       }
     }
 
+    return result;
+  }
+
+
+  private void addDummyEdges(DirectedPseudograph<ASTNode, ASTEdge> graph) {
     // find nodes with out degree zero or error label and connect them with an end node
     ASTNode endNode = new ASTNode(ASTNodeLabel.END);
-    result.addVertex(endNode);
+    graph.addVertex(endNode);
     Set<ASTEdge> edgesToDelete = new HashSet<>();
-    for(ASTNode n : result.vertexSet()) {
-      if((result.outDegreeOf(n) == 0 || n.getLabels().containsAll(programEndLabels)) && n != endNode) {
+    for(ASTNode n : graph.vertexSet()) {
+      if((graph.outDegreeOf(n) == 0 || n.getLabels().containsAll(programEndLabels)) && n != endNode) {
 
-        for(ASTEdge e : result.outgoingEdgesOf(n))
+        for(ASTEdge e : graph.outgoingEdgesOf(n))
           edgesToDelete.add(e);
 
         ASTEdge edge = new ASTEdge(n, endNode,
             ASTEdgeLabel.CONTROL_FLOW);
-        result.addEdge(n, endNode, edge);
+        graph.addEdge(n, endNode, edge);
         // Add dummy edge to enforce multigraph in graphml (workaround) Todo find a better solution!
         ASTEdge dummyEdge = new ASTEdge(n, endNode,
             ASTEdgeLabel.DUMMY);
-        result.addEdge(n, endNode, dummyEdge);
+        graph.addEdge(n, endNode, dummyEdge);
       }
     }
-    result.removeAllEdges(edgesToDelete);
+    graph.removeAllEdges(edgesToDelete);
+
     // If there are infinite cycles in the cfg, then find sccs and connect some node from them with the end node (dummy edge)
     StrongConnectivityInspector<ASTNode, ASTEdge> sccInsp =
-        new StrongConnectivityInspector<>(result);
+        new StrongConnectivityInspector<>(graph);
     for(Set<ASTNode> scc : sccInsp.stronglyConnectedSets()) {
 
       if(scc.size() < 2)
@@ -224,7 +255,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       boolean terminate = false;
       for(ASTNode n : scc) {
 
-        for(ASTEdge e : result.outgoingEdgesOf(n)) {
+        for(ASTEdge e : graph.outgoingEdgesOf(n)) {
           if(!scc.contains(e.getTargetNode())) {
             terminate = true;
             break;
@@ -233,7 +264,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         if(terminate)
           break;
 
-        if(result.outDegreeOf(n) < 2) {
+        if(graph.outDegreeOf(n) < 2) {
           source = n;
         }
       }
@@ -241,13 +272,11 @@ public class GraphGeneratorAlgorithm implements Algorithm {
         assert source != null;
         ASTEdge edge = new ASTEdge(source, endNode,
             ASTEdgeLabel.DUMMY);
-        result.addEdge(source, endNode, edge);
+        graph.addEdge(source, endNode, edge);
       }
     }
 
-    assert result.inDegreeOf(endNode) != 0;
-
-    return result;
+    assert graph.inDegreeOf(endNode) != 0;
   }
 
   /**
@@ -326,46 +355,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
   }
 
-  /**
-   * Removes an AST from a graph and reconnects incoming/outgoing edges
-   * @param graph
-   * @param tree
-   */
-  private void removeASTFromGraph(DirectedPseudograph<ASTNode, ASTEdge> graph, ASTree tree, boolean ignoreOutgoing) {
-
-    ASTNode root = tree.getRoot();
-    Set<ASTEdge> incomingEdges = graph.incomingEdgesOf(root);
-    Set<ASTEdge> outgoingEdges = graph.outgoingEdgesOf(root);
-
-    for(ASTEdge incoming : incomingEdges) {
-      ASTNode source = incoming.getSourceNode();
-      for(ASTEdge outgoing : outgoingEdges) {
-
-        ASTNode target = outgoing.getTargetNode();
-        if(ignoreOutgoing || incoming.equalAttributes(outgoing)) {
-          ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
-          newEdge.setTruthValue(incoming.getTruthValue());
-          graph.addEdge(source, target, newEdge);
-        } else {
-          // If both edges do not have equal attrbutes, create two new edges
-          ASTEdge newEdgeA = new ASTEdge(source, target, incoming.getAstEdgeLabel());
-          newEdgeA.setTruthValue(incoming.getTruthValue());
-          graph.addEdge(source, target, newEdgeA);
-
-          ASTEdge newEdgeB = new ASTEdge(source, target, outgoing.getAstEdgeLabel());
-          newEdgeB.setTruthValue(outgoing.getTruthValue());
-          graph.addEdge(source, target, newEdgeB);
-        }
-
-      }
-    }
-    // Remove AST
-    graph.removeAllEdges(tree.asGraph().edgeSet());
-    graph.removeAllVertices(tree.asGraph().vertexSet());
-    graph.removeAllEdges(incomingEdges);
-    graph.removeAllEdges(outgoingEdges);
-  }
-
   private void addControlDependencies(DirectedPseudograph<ASTNode, ASTEdge> pInputGraph) {
     DirectedGraph<ASTNode, ASTEdge> graph = new EdgeReversedGraph<>(pInputGraph);
     // Find entry node
@@ -429,8 +418,79 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       DirectedPseudograph<ASTNode, ASTEdge> graph,
       Set<ASTCollectorState> states) {
     for(ASTCollectorState s : states) {
-      Graphs.addGraph(graph, s.getTree().asGraph());
+      if(graph.containsVertex(s.getTree().getRoot())) {
+        Graphs.addGraph(graph, s.getTree().asGraph());
+      }
     }
+  }
+
+  private void pruneUnusedGlobalDeclarations(DirectedPseudograph<ASTNode, ASTEdge> graph, Set<ASTCollectorState> states) {
+    Set<ASTree> globalTrees = new HashSet<>();
+    Set<ASTree> localTrees = new HashSet<>();
+    for(ASTCollectorState s : states) {
+      ASTree tree = s.getTree();
+      if(tree.getRoot().isGlobal())
+        globalTrees.add(tree);
+      else
+        localTrees.add(tree);
+    }
+
+    Map<String, ASTree> idToASTree = new HashMap<>();
+    Set<ASTree> noRemove = new HashSet<>();
+    for(ASTree tree : globalTrees) {
+      String declId = tree.getIdentifiers().iterator().next();
+      assert declId != null;
+      idToASTree.put(declId, tree);
+    }
+
+    // look for local usage of global declarations
+    for(ASTree tree : localTrees) {
+      for(String id : tree.getIdentifiers()) {
+        if(idToASTree.containsKey(id))
+          noRemove.add(idToASTree.get(id));
+      }
+    }
+
+    // look for dependencies between global declarations
+    boolean foundDependencies = true;
+    while(foundDependencies) {
+      Set<ASTree> dependencies = new HashSet<>();
+      for(ASTree tree : noRemove) {
+        for(String id : tree.getIdentifiers()) {
+          assert idToASTree.containsKey(id);
+          dependencies.add(idToASTree.get(id));
+        }
+      }
+      foundDependencies = noRemove.addAll(dependencies);
+    }
+
+    // remove all unused global declarations
+    Set<ASTNode> nodesToRemove = new HashSet<>();
+
+    final Collection<ASTNode> noRemoveNodes = Collections2.transform(noRemove,
+        new Function<ASTree, ASTNode>() {
+          @Override
+          public ASTNode apply(ASTree pASTree) {
+            return pASTree.getRoot();
+          }
+        });
+
+    for(ASTNode n : graph.vertexSet()) {
+      if(n.isGlobal() && !noRemoveNodes.contains(n))
+        nodesToRemove.add(n);
+    }
+    for(ASTNode n : nodesToRemove) {
+      assert graph.inDegreeOf(n) == 1 && graph.outDegreeOf(n) == 1;
+      ASTEdge incoming = graph.incomingEdgesOf(n).iterator().next();
+      ASTEdge outgoing = graph.outgoingEdgesOf(n).iterator().next();
+      ASTEdge newEdge = new ASTEdge(incoming.getSourceNode(), outgoing.getTargetNode(),
+          ASTEdgeLabel.CONTROL_FLOW);
+      graph.addEdge(incoming.getSourceNode(), outgoing.getTargetNode(), newEdge);
+      graph.removeEdge(incoming);
+      graph.removeEdge(outgoing);
+      graph.removeVertex(n);
+    }
+
   }
 
 
@@ -508,7 +568,6 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
     // Fill data structures
     Table<Integer, Integer, ASTCollectorState> edgeToState = HashBasedTable.create();
-    Map<Integer, Set<AbstractState>> locToAbstractState = new HashMap<>();
 
     for(AbstractState absState : reachedSet.asCollection()) {
 
@@ -522,22 +581,18 @@ public class GraphGeneratorAlgorithm implements Algorithm {
             edgeToState.put(e.getSource(), e.getTarget(), gmState);
         }
 
-        if(child instanceof LocationState) {
-          LocationState locState = (LocationState)child;
-          int nodeNum = locState.getLocationNode().getNodeNumber();
-          if(!locToAbstractState.containsKey(nodeNum))
-            locToAbstractState.put(nodeNum, new HashSet<AbstractState>());
-          locToAbstractState.get(nodeNum).add(absState);
-        }
-
       }
     }
     Set<ASTCollectorState> states = new HashSet<>(edgeToState.values());
+
+
     // Create graph representation
     DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
-//    pruneBlankNodes(graph);
+    pruneUnusedGlobalDeclarations(graph, states);
+    pruneBlankNodes(graph);
+    addDummyEdges(graph);
     //addDataDependenceEdges(astLocStates, gm, statesPerNode);
-    //addControlDependencies(graph);
+    addControlDependencies(graph);
     addASTsToGraph(graph, states);
 
     // Export graph

@@ -23,7 +23,9 @@
  */
 package org.sosy_lab.cpachecker.cpa.astcollector;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.jgrapht.DirectedGraph;
@@ -38,34 +40,10 @@ public class ASTree {
 
   private ASTNode root = null;
 
-  private Set<String> identifierList = new HashSet<>();
-
-  @Override
-  public boolean equals(Object pO) {
-    if (this == pO) {
-      return true;
-    }
-    if (pO == null || getClass() != pO.getClass()) {
-      return false;
-    }
-
-    ASTree asTree = (ASTree)pO;
-
-    if (root != null ? !root.equals(asTree.root) : asTree.root != null) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return root != null ? root.hashCode() : 0;
-  }
+  private List<String> identifierList = new ArrayList<>();
 
   public ASTree(ASTNode pRoot) {
     this.tree.addVertex(pRoot);
-
     this.root = pRoot;
     reinitASTNodeDepth();
   }
@@ -81,7 +59,7 @@ public class ASTree {
     return this.tree;
   }
 
-  public Set<String> getIdentifiers() {
+  public List<String> getIdentifiers() {
     return identifierList;
   }
 
@@ -132,6 +110,29 @@ public class ASTree {
 
   public ASTNode getRoot() {
     return this.root;
+  }
+
+  @Override
+  public boolean equals(Object pO) {
+    if (this == pO) {
+      return true;
+    }
+    if (pO == null || getClass() != pO.getClass()) {
+      return false;
+    }
+
+    ASTree asTree = (ASTree)pO;
+
+    if (root != null ? !root.equals(asTree.root) : asTree.root != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return root != null ? root.hashCode() : 0;
   }
 
 }
