@@ -524,48 +524,51 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       Set<ASTCollectorState> states,
       Set<AbstractState> reachDefStates,
       Table<Integer, Integer, ASTCollectorState> edgeToState) {
+
+    Map<Integer, Set<ReachingDefState>> nodeIdToReachDefState = new HashMap<>();
+    for(AbstractState as : reachDefStates) {
+      CFANode loc = AbstractStates.extractLocation(as);
+      ARGState state = (ARGState)as;
+      CompositeState compState = (CompositeState)state.getWrappedState();
+      for(AbstractState child : compState.getWrappedStates()) {
+
+        if (child instanceof ReachingDefState) {
+          ReachingDefState rdState = (ReachingDefState)child;
+          if(!nodeIdToReachDefState.containsKey(loc.getNodeNumber())) {
+            nodeIdToReachDefState.put(loc.getNodeNumber(), new HashSet<ReachingDefState>());
+          }
+          nodeIdToReachDefState.get(loc.getNodeNumber()).add(rdState);
+        }
+
+      }
+
+    }
+
+
     for(ASTCollectorState s : states) {
       ASTree tree = s.getTree();
-      if(graph.vertexSet().contains(tree.getRoot())) {
+      int sourceId = s.getCfaEdgeInfoSet().iterator().next().getSource();
+      if(graph.vertexSet().contains(tree.getRoot())
+          && nodeIdToReachDefState.containsKey(sourceId)) {
 
-        int sourceId = s.getCfaEdgeInfoSet().iterator().next().getSource();
-        CFANode sourceCFANode = null;
-        for(CFANode n : cfa.getAllNodes()) {
-          if(n.getNodeNumber() == sourceId) {
-            sourceCFANode = n;
-          }
-        }
-        assert sourceCFANode != null;
-
-        Iterable<AbstractState> abstrStates =
-            AbstractStates.filterLocation(reachDefStates, sourceCFANode);
         Set<ProgramDefinitionPoint> defPoints = new HashSet<>();
-        for(AbstractState as : abstrStates) {
-          ARGState state = (ARGState)as;
-          CompositeState compState = (CompositeState)state.getWrappedState();
-          for(AbstractState child : compState.getWrappedStates()) {
+        for(ReachingDefState rdState : nodeIdToReachDefState.get(sourceId)) {
+          Map<String, Set<DefinitionPoint>> local = rdState.getLocalReachingDefinitions();
+          Map<String, Set<DefinitionPoint>> global = rdState.getGlobalReachingDefinitions();
+          Set<String> vars = s.getVariables();
+          for(String var : vars) {
 
-            if(child instanceof ReachingDefState) {
-              ReachingDefState rdState = (ReachingDefState)child;
-              Map<String, Set<DefinitionPoint>> local = rdState.getLocalReachingDefinitions();
-              Map<String, Set<DefinitionPoint>> global = rdState.getGlobalReachingDefinitions();
-              Set<String> vars = s.getVariables();
-              for(String var : vars) {
+            if(local.containsKey(var)) {
+              for(DefinitionPoint dp : local.get(var)) {
+                if(dp instanceof ProgramDefinitionPoint)
+                  defPoints.add((ProgramDefinitionPoint)dp);
+              }
+            }
 
-                if(local.containsKey(var)) {
-                  for(DefinitionPoint dp : local.get(var)) {
-                    if(dp instanceof ProgramDefinitionPoint)
-                      defPoints.add((ProgramDefinitionPoint)dp);
-                  }
-                }
-
-                if(global.containsKey(var)) {
-                  for(DefinitionPoint dp : global.get(var)) {
-                    if(dp instanceof ProgramDefinitionPoint)
-                      defPoints.add((ProgramDefinitionPoint)dp);
-                  }
-                }
-
+            if(global.containsKey(var)) {
+              for(DefinitionPoint dp : global.get(var)) {
+                if(dp instanceof ProgramDefinitionPoint)
+                  defPoints.add((ProgramDefinitionPoint)dp);
               }
             }
 
