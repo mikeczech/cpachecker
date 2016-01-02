@@ -30,11 +30,10 @@ import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
-
-import javax.annotation.Nullable;
 
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graphs;
@@ -60,6 +59,7 @@ import org.sosy_lab.cpachecker.core.algorithm.Algorithm;
 import org.sosy_lab.cpachecker.core.algorithm.graphgen.utils.Dominators;
 import org.sosy_lab.cpachecker.core.interfaces.AbstractState;
 import org.sosy_lab.cpachecker.core.interfaces.ConfigurableProgramAnalysis;
+import org.sosy_lab.cpachecker.core.reachedset.HistoryForwardingReachedSet;
 import org.sosy_lab.cpachecker.core.reachedset.ReachedSet;
 import org.sosy_lab.cpachecker.cpa.arg.ARGState;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTCollectorState;
@@ -70,9 +70,12 @@ import org.sosy_lab.cpachecker.cpa.astcollector.ASTNode;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTNodeLabel;
 import org.sosy_lab.cpachecker.cpa.astcollector.ASTree;
 import org.sosy_lab.cpachecker.cpa.composite.CompositeState;
-import org.sosy_lab.cpachecker.cpa.location.LocationState;
+import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState;
+import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.DefinitionPoint;
+import org.sosy_lab.cpachecker.cpa.reachdef.ReachingDefState.ProgramDefinitionPoint;
 import org.sosy_lab.cpachecker.exceptions.CPAEnabledAnalysisPropertyViolationException;
 import org.sosy_lab.cpachecker.exceptions.CPAException;
+import org.sosy_lab.cpachecker.util.AbstractStates;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -500,72 +503,72 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
   }
 
+  private void addDataDependencyEdges(
+      DirectedPseudograph<ASTNode, ASTEdge> graph,
+      Set<ASTCollectorState> states,
+      Set<AbstractState> reachDefStates,
+      Table<Integer, Integer, ASTCollectorState> edgeToState) {
+    for(ASTCollectorState s : states) {
+      ASTree tree = s.getTree();
+      if(graph.vertexSet().contains(tree.getRoot())) {
 
-//  private void addDataDependenceEdges(Table<Integer, Integer, ASTCollectorState> states,
-//      DirectedMultigraph<ASTNode, ASTEdge> pGM, Map<Integer, Set<AbstractState>> statesPerNode) {
-//    Map<Integer, ReachingDefState> reachDef = collectReachDef(statesPerNode);
-//    for(ASTCollectorState s : states.values()) {
-//      ASTNode targetRoot = s.getTree().getRoot();
-//      for(CFAEdgeInfo e : s.getCfaEdgeInfoSet()) {
-//        ReachingDefState reachDefState = reachDef.get(e.getSource());
-//        for(String var : s.getVariables()) {
-//
-//          Set<DefinitionPoint> local = reachDefState.getLocalReachingDefinitions().get(var);
-//          Set<DefinitionPoint> global = reachDefState.getGlobalReachingDefinitions().get(var);
-//          List<DefinitionPoint> defPoints = new ArrayList<>();
-//          if(local != null)
-//            defPoints.addAll(local);
-//          if(global != null)
-//            defPoints.addAll(global);
-//
-//          // Create for each program definition point a data dependence edge
-//          for(DefinitionPoint p : defPoints) {
-//            if(p instanceof ProgramDefinitionPoint) {
-//              ProgramDefinitionPoint pdp = (ProgramDefinitionPoint)p;
-//              ASTNode sourceRoot = states.get(pdp.getDefinitionEntryLocation().getNodeNumber(),
-//                  pdp.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
-//              pGM.addEdge(sourceRoot, targetRoot, new ASTEdge(sourceRoot, targetRoot, ASTEdgeLabel.DATA_DEPENDENCE));
-//            }
-//          }
-//        }
-//      }
-//    }
-//  }
-//
-//  private Map<Integer, ReachingDefState> collectReachDef(Map<Integer, Set<AbstractState>> statesPerNode) {
-//    Map<Integer, ReachingDefState> result = new HashMap<>();
-//    for(Integer nodeNum : statesPerNode.keySet()) {
-//      Set<ReachingDefState> reachDefStates = new HashSet<>();
-//      // Collect ReachDef states for node
-//      for(AbstractState absState : statesPerNode.get(nodeNum)) {
-//        ARGState state = (ARGState)absState;
-//        CompositeState compState = (CompositeState)state.getWrappedState();
-//        for(AbstractState child : compState.getWrappedStates()) {
-//          if (child instanceof ReachingDefState) {
-//            ReachingDefState reachDef = (ReachingDefState)child;
-//            reachDefStates.add(reachDef);
-//          }
-//        }
-//      }
-//      // Merge ReachDef states for node
-//      Map<String, Set<DefinitionPoint>> localReachDef = new HashMap<>();
-//      Map<String, Set<DefinitionPoint>> globalReachDef = new HashMap<>();
-//      for(ReachingDefState rdState : reachDefStates) {
-//        for(String var : rdState.getLocalReachingDefinitions().keySet()) {
-//          if(!localReachDef.containsKey(var))
-//            localReachDef.put(var, new HashSet<DefinitionPoint>());
-//          localReachDef.get(var).addAll(rdState.getLocalReachingDefinitions().get(var));
-//        }
-//        for(String var : rdState.getGlobalReachingDefinitions().keySet()) {
-//          if(!globalReachDef.containsKey(var))
-//            globalReachDef.put(var, new HashSet<DefinitionPoint>());
-//          globalReachDef.get(var).addAll(rdState.getGlobalReachingDefinitions().get(var));
-//        }
-//      }
-//      result.put(nodeNum, new ReachingDefState(localReachDef, globalReachDef, null));
-//    }
-//    return result;
-//  }
+        int sourceId = s.getCfaEdgeInfoSet().iterator().next().getSource();
+        CFANode sourceCFANode = null;
+        for(CFANode n : cfa.getAllNodes()) {
+          if(n.getNodeNumber() == sourceId) {
+            sourceCFANode = n;
+          }
+        }
+        assert sourceCFANode != null;
+
+        Iterable<AbstractState> abstrStates =
+            AbstractStates.filterLocation(reachDefStates, sourceCFANode);
+        Set<ProgramDefinitionPoint> defPoints = new HashSet<>();
+        for(AbstractState as : abstrStates) {
+          ARGState state = (ARGState)as;
+          CompositeState compState = (CompositeState)state.getWrappedState();
+          for(AbstractState child : compState.getWrappedStates()) {
+
+            if(child instanceof ReachingDefState) {
+              ReachingDefState rdState = (ReachingDefState)child;
+              Map<String, Set<DefinitionPoint>> local = rdState.getLocalReachingDefinitions();
+              Map<String, Set<DefinitionPoint>> global = rdState.getGlobalReachingDefinitions();
+              Set<String> vars = s.getVariables();
+              for(String var : vars) {
+
+                if(local.containsKey(var)) {
+                  for(DefinitionPoint dp : local.get(var)) {
+                    if(dp instanceof ProgramDefinitionPoint)
+                      defPoints.add((ProgramDefinitionPoint)dp);
+                  }
+                }
+
+                if(global.containsKey(var)) {
+                  for(DefinitionPoint dp : global.get(var)) {
+                    if(dp instanceof ProgramDefinitionPoint)
+                      defPoints.add((ProgramDefinitionPoint)dp);
+                  }
+                }
+
+              }
+            }
+
+          }
+        }
+
+        // add data dependency edges
+        for(ProgramDefinitionPoint p : defPoints) {
+          ASTNode sourceNode = edgeToState.get(p.getDefinitionEntryLocation().getNodeNumber(),
+              p.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
+          ASTNode targetNode = tree.getRoot();
+          ASTEdge dataDependencyEdge = new ASTEdge(sourceNode, targetNode, ASTEdgeLabel.DATA_DEPENDENCE);
+          graph.addEdge(sourceNode, targetNode, dataDependencyEdge);
+        }
+
+      }
+    }
+  }
+
 
   @Override
   public AlgorithmStatus run(ReachedSet reachedSet)
@@ -573,10 +576,12 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     AlgorithmStatus result = algorithm.run(reachedSet);
     logger.log(Level.INFO, "Graph generator algorithm started.");
 
+    List<ReachedSet> reachedSets = ((HistoryForwardingReachedSet)reachedSet).getAllReachedSetsUsedAsDelegates();
+
     // Fill data structures
     Table<Integer, Integer, ASTCollectorState> edgeToState = HashBasedTable.create();
 
-    for(AbstractState absState : reachedSet.asCollection()) {
+    for(AbstractState absState : reachedSets.get(1).asCollection()) {
 
       ARGState state = (ARGState)absState;
       CompositeState compState = (CompositeState)state.getWrappedState();
@@ -592,14 +597,13 @@ public class GraphGeneratorAlgorithm implements Algorithm {
     }
     Set<ASTCollectorState> states = new HashSet<>(edgeToState.values());
 
-
     // Create graph representation
     DirectedPseudograph<ASTNode, ASTEdge> graph = generateCFGFromStates(edgeToState);
     pruneUnusedGlobalDeclarations(graph, states);
     pruneBlankNodes(graph);
     addDummyEdges(graph);
-    //addDataDependenceEdges(astLocStates, gm, statesPerNode);
     addControlDependencies(graph);
+    addDataDependencyEdges(graph, states, reachedSets.get(0).asCollection(), edgeToState);
     addASTsToGraph(graph, states);
 
     // Export graph

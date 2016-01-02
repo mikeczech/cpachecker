@@ -227,7 +227,8 @@ public class ReachingDefTransferRelation implements TransferRelation {
     if (pState.getGlobalReachingDefinitions().containsKey(var)) {
       return pState.addGlobalReachDef(var, edge.getPredecessor(), edge.getSuccessor());
     } else {
-      assert (pState.getLocalReachingDefinitions().containsKey(var));
+      if(!pState.getLocalReachingDefinitions().containsKey(var))
+        return pState;
       return pState.addLocalReachDef(var, edge.getPredecessor(), edge.getSuccessor());
     }
   }

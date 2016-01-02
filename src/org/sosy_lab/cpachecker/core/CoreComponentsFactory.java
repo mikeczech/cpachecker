@@ -186,6 +186,15 @@ public class CoreComponentsFactory {
       if (useARGCombiningAlgorithm) {
         algorithm = new PartialARGsCombiner(algorithm, config, logger, shutdownNotifier, cfa);
       }
+
+      if (useGraphGenAlgorithm) {
+//        if(!(cpa instanceof ASTCollectorCPA)) {
+//          throw new InvalidConfigurationException(
+//              "Graph Model Generator needs GMCPA as Top CPA");
+//        }
+        algorithm =
+            new GraphGeneratorAlgorithm(algorithm, logger, cpa, cfa);
+      }
     } else if (useImpactAlgorithm) {
       algorithm = new ImpactAlgorithm(config, logger, shutdownNotifier, cpa, cfa);
 
@@ -236,14 +245,6 @@ public class CoreComponentsFactory {
             new AlgorithmWithPropertyCheck(algorithm, logger, (PropertyCheckerCPA) cpa);
       }
 
-      if (useGraphGenAlgorithm) {
-//        if(!(cpa instanceof ASTCollectorCPA)) {
-//          throw new InvalidConfigurationException(
-//              "Graph Model Generator needs GMCPA as Top CPA");
-//        }
-        algorithm =
-            new GraphGeneratorAlgorithm(algorithm, logger, cpa, cfa);
-      }
 
       if (useResultCheckAlgorithm) {
         algorithm = new ResultCheckAlgorithm(algorithm, cpa, cfa, config, logger, shutdownNotifier);

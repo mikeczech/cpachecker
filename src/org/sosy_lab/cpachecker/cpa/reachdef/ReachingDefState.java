@@ -501,6 +501,11 @@ public class ReachingDefState implements AbstractState, Serializable,
     return sb.toString();
   }
 
+  @Override
+  public String toString() {
+    return String.format("Local: %s, Global: %s", createStringOfMap(localReachDefs), createStringOfMap(globalReachDefs));
+  }
+
   private String createStringOfMap(Map<String, Set<DefinitionPoint>> map) {
     StringBuilder sb = new StringBuilder();
     sb.append(" [");
