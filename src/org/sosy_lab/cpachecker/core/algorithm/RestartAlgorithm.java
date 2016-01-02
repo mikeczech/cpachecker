@@ -249,7 +249,6 @@ public class RestartAlgorithm implements Algorithm, StatisticsProvider {
             // if there are still states in the waitlist, the result is unknown
             // continue with the next algorithm
             logger.log(Level.INFO, "Analysis not completed: There are still states to be processed.");
-            return status;
           } else {
             // sound analysis and completely finished, terminate
             //return status;

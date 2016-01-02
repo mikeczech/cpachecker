@@ -27,9 +27,11 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,33 +139,47 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param pGraph
    */
   private void pruneBlankNodes(DirectedPseudograph<ASTNode, ASTEdge> pGraph) {
-    // add control flow edge between sources and targets of blank nodes
-    // hacky solution. Todo fix this
-    while(true) {
-      ASTNode nodeToRemove = null;
+    ASTNode nodeToRemove;
+    Set<ASTNode> nodesToRemove = new HashSet<>();
+    Set<ASTEdge> edgesToAdd = new HashSet<>();
+    Set<ASTEdge> edgesToIgnore = new HashSet<>();
+    do {
+      nodeToRemove = null;
       for(ASTNode node : pGraph.vertexSet()) {
-        if(node.isBlank()) {
+        if(node.isBlank() && !nodesToRemove.contains(node)) {
           nodeToRemove = node;
-          Set<ASTEdge> incomingEdges = pGraph.incomingEdgesOf(node);
-          Set<ASTEdge> outgoingEdges = pGraph.outgoingEdgesOf(node);
-
-          for(ASTEdge out : outgoingEdges) {
-            ASTNode target = out.getTargetNode();
-            for(ASTEdge incoming : incomingEdges) {
-              ASTNode source = incoming.getSourceNode();
-              ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
-              newEdge.setTruthValue(incoming.getTruthValue());
-              pGraph.addEdge(source, target, newEdge);
-            }
-          }
           break;
         }
       }
-      if(nodeToRemove != null)
-        pGraph.removeVertex(nodeToRemove);
-      else
-        break;
-    }
+      if(nodeToRemove != null) {
+        Set<ASTEdge> incomingEdges = pGraph.incomingEdgesOf(nodeToRemove);
+        Set<ASTEdge> outgoingEdges = pGraph.outgoingEdgesOf(nodeToRemove);
+        // add control flow edge between sources and targets of blank nodes
+        for(ASTEdge out : outgoingEdges) {
+          if(!edgesToIgnore.contains(out)) {
+            ASTNode target = out.getTargetNode();
+            for(ASTEdge incoming : incomingEdges) {
+              if(!edgesToIgnore.contains(incoming)) {
+                ASTNode source = incoming.getSourceNode();
+                ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
+                newEdge.setTruthValue(incoming.getTruthValue());
+                edgesToAdd.add(newEdge);
+                edgesToIgnore.add(incoming);
+              }
+            }
+            edgesToIgnore.add(out);
+          }
+        }
+        for(ASTEdge e : edgesToAdd) {
+          pGraph.addEdge(e.getSourceNode(), e.getTargetNode(), e);
+        }
+        nodesToRemove.add(nodeToRemove);
+      }
+    } while(nodeToRemove != null);
+
+    pGraph.removeAllEdges(edgesToIgnore);
+    pGraph.removeAllVertices(nodesToRemove);
+
     Set<ASTNode> floatingNodes = new HashSet<>();
     // remove all nodes which have an outgoing edge, but no incoming (except the start node)
     for(ASTNode node : pGraph.vertexSet()) {
@@ -467,8 +483,8 @@ public class GraphGeneratorAlgorithm implements Algorithm {
       Set<ASTree> dependencies = new HashSet<>();
       for(ASTree tree : noRemove) {
         for(String id : tree.getIdentifiers()) {
-          assert idToASTree.containsKey(id);
-          dependencies.add(idToASTree.get(id));
+          if(idToASTree.containsKey(id))
+            dependencies.add(idToASTree.get(id));
         }
       }
       foundDependencies = noRemove.addAll(dependencies);
@@ -595,6 +611,7 @@ public class GraphGeneratorAlgorithm implements Algorithm {
 
       }
     }
+
     Set<ASTCollectorState> states = new HashSet<>(edgeToState.values());
 
     // Create graph representation
