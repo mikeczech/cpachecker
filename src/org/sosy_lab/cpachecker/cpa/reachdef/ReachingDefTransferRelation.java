@@ -121,7 +121,7 @@ public class ReachingDefTransferRelation implements TransferRelation {
   private Collection<? extends AbstractState> getAbstractSuccessors0(AbstractState pState, Precision pPrecision,
       CFAEdge pCfaEdge) throws CPATransferException {
 
-    logger.log(Level.INFO, "Compute succesor for ", pState, "along edge", pCfaEdge);
+    logger.log(Level.FINER, "Compute succesor for ", pState, "along edge", pCfaEdge);
 
     if (localVariablesPerFunction == null) { throw new CPATransferException(
         "Incorrect initialization of reaching definition transfer relation."); }
@@ -201,7 +201,7 @@ public class ReachingDefTransferRelation implements TransferRelation {
     } else if (statement instanceof CFunctionCallAssignmentStatement) {
       // handle function call on right hand side to external method
       left = ((CFunctionCallAssignmentStatement) statement).getLeftHandSide();
-      logger.log(Level.WARNING,
+      logger.log(Level.FINER,
           "Analysis may be unsound if external method redefines global variables",
           "or considers extra global variables.");
     } else {
