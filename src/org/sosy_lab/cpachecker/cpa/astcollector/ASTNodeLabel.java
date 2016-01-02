@@ -27,6 +27,12 @@ import java.io.Serializable;
 
 public enum ASTNodeLabel implements Serializable {
 
+
+  FUNCTION_START,
+  SKIP,
+  GOTO,
+  LABEL,
+
   // New
   LOOP_ENTRY,
   INITIALIZER_LIST,

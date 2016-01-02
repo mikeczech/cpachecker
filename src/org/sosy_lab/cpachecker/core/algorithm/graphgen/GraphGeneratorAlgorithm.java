@@ -139,46 +139,47 @@ public class GraphGeneratorAlgorithm implements Algorithm {
    * @param pGraph
    */
   private void pruneBlankNodes(DirectedPseudograph<ASTNode, ASTEdge> pGraph) {
-    ASTNode nodeToRemove;
-    Set<ASTNode> nodesToRemove = new HashSet<>();
-    Set<ASTEdge> edgesToAdd = new HashSet<>();
-    Set<ASTEdge> edgesToIgnore = new HashSet<>();
-    do {
-      nodeToRemove = null;
-      for(ASTNode node : pGraph.vertexSet()) {
-        if(node.isBlank() && !nodesToRemove.contains(node)) {
-          nodeToRemove = node;
-          break;
-        }
-      }
-      if(nodeToRemove != null) {
-        Set<ASTEdge> incomingEdges = pGraph.incomingEdgesOf(nodeToRemove);
-        Set<ASTEdge> outgoingEdges = pGraph.outgoingEdgesOf(nodeToRemove);
-        // add control flow edge between sources and targets of blank nodes
-        for(ASTEdge out : outgoingEdges) {
-          if(!edgesToIgnore.contains(out)) {
-            ASTNode target = out.getTargetNode();
-            for(ASTEdge incoming : incomingEdges) {
-              if(!edgesToIgnore.contains(incoming)) {
-                ASTNode source = incoming.getSourceNode();
-                ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
-                newEdge.setTruthValue(incoming.getTruthValue());
-                edgesToAdd.add(newEdge);
-                edgesToIgnore.add(incoming);
-              }
-            }
-            edgesToIgnore.add(out);
-          }
-        }
-        for(ASTEdge e : edgesToAdd) {
-          pGraph.addEdge(e.getSourceNode(), e.getTargetNode(), e);
-        }
-        nodesToRemove.add(nodeToRemove);
-      }
-    } while(nodeToRemove != null);
-
-    pGraph.removeAllEdges(edgesToIgnore);
-    pGraph.removeAllVertices(nodesToRemove);
+//    // Very buggy Todo fix this
+//    ASTNode nodeToRemove;
+//    Set<ASTNode> nodesToRemove = new HashSet<>();
+//    Set<ASTEdge> edgesToAdd = new HashSet<>();
+//    Set<ASTEdge> edgesToIgnore = new HashSet<>();
+//    do {
+//      nodeToRemove = null;
+//      for(ASTNode node : pGraph.vertexSet()) {
+//        if(node.isBlank() && !nodesToRemove.contains(node)) {
+//          nodeToRemove = node;
+//          break;
+//        }
+//      }
+//      if(nodeToRemove != null) {
+//        Set<ASTEdge> incomingEdges = pGraph.incomingEdgesOf(nodeToRemove);
+//        Set<ASTEdge> outgoingEdges = pGraph.outgoingEdgesOf(nodeToRemove);
+//        // add control flow edge between sources and targets of blank nodes
+//        for(ASTEdge out : outgoingEdges) {
+//          if(!edgesToIgnore.contains(out)) {
+//            ASTNode target = out.getTargetNode();
+//            for(ASTEdge incoming : incomingEdges) {
+//              if(!edgesToIgnore.contains(incoming)) {
+//                ASTNode source = incoming.getSourceNode();
+//                ASTEdge newEdge = new ASTEdge(source, target, incoming.getAstEdgeLabel());
+//                newEdge.setTruthValue(incoming.getTruthValue());
+//                edgesToAdd.add(newEdge);
+//                edgesToIgnore.add(incoming);
+//              }
+//            }
+//            edgesToIgnore.add(out);
+//          }
+//        }
+//        for(ASTEdge e : edgesToAdd) {
+//          pGraph.addEdge(e.getSourceNode(), e.getTargetNode(), e);
+//        }
+//        nodesToRemove.add(nodeToRemove);
+//      }
+//    } while(nodeToRemove != null);
+//
+//    pGraph.removeAllEdges(edgesToIgnore);
+//    pGraph.removeAllVertices(nodesToRemove);
 
     Set<ASTNode> floatingNodes = new HashSet<>();
     // remove all nodes which have an outgoing edge, but no incoming (except the start node)

@@ -160,6 +160,14 @@ public class ASTCollectorTransferRelation extends ForwardingTransferRelation<AST
     ASTNodeLabel label;
     if(cfaEdge.getDescription() == "while" || cfaEdge.getDescription() == "for" || cfaEdge.getDescription() == "do")
       label = ASTNodeLabel.LOOP_ENTRY;
+    else if(cfaEdge.getDescription() == "Function start dummy edge")
+      label = ASTNodeLabel.FUNCTION_START;
+    else if(cfaEdge.getDescription() == "skip")
+      label = ASTNodeLabel.SKIP;
+    else if(cfaEdge.getDescription().startsWith("Goto"))
+      label = ASTNodeLabel.GOTO;
+    else if(cfaEdge.getDescription().startsWith("Label"))
+      label = ASTNodeLabel.LABEL;
     else
       label = ASTNodeLabel.BLANK;
     ASTree
