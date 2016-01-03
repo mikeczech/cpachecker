@@ -37,6 +37,7 @@ public enum ASTNodeLabel implements Serializable {
   LOOP_ENTRY,
   INITIALIZER_LIST,
   INITIALIZER,
+  DESIGNED_INITIALIZER,
   START,
   END,
   PROBLEM_TYPE,

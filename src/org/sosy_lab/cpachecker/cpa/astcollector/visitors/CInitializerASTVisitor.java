@@ -66,6 +66,7 @@ public class CInitializerASTVisitor implements CInitializerVisitor<ASTree, CPATr
   @Override
   public ASTree visit(CDesignatedInitializer pCStructInitializerPart)
       throws CPATransferException {
-    throw new UnsupportedCCodeException("Designed initializers are not supported", this.cfaEdge);
+    ASTree tree = new ASTree(new ASTNode(ASTNodeLabel.DESIGNED_INITIALIZER));
+    return tree;
   }
 }
