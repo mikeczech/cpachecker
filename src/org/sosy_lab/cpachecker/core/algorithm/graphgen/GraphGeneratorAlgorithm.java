@@ -582,7 +582,9 @@ public class GraphGeneratorAlgorithm implements Algorithm {
               p.getDefinitionExitLocation().getNodeNumber()).getTree().getRoot();
           ASTNode targetNode = tree.getRoot();
           ASTEdge dataDependencyEdge = new ASTEdge(sourceNode, targetNode, ASTEdgeLabel.DATA_DEPENDENCE);
-          graph.addEdge(sourceNode, targetNode, dataDependencyEdge);
+          // DEBUG
+          if(graph.vertexSet().contains(sourceNode) && graph.vertexSet().contains(targetNode))
+            graph.addEdge(sourceNode, targetNode, dataDependencyEdge);
         }
 
       }

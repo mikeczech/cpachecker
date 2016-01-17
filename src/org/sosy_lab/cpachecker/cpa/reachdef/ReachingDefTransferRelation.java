@@ -216,7 +216,7 @@ public class ReachingDefTransferRelation implements TransferRelation {
     varExtractor.resetWarning();
     String var = left.accept(varExtractor);
     if (varExtractor.getWarning() != null) {
-      logger.log(Level.WARNING, varExtractor.getWarning());
+      logger.log(Level.FINER, varExtractor.getWarning());
     }
 
     if (var == null) {
